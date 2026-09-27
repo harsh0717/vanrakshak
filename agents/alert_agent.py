@@ -145,17 +145,22 @@ class AlertAgent:
         """
         self.status = "PROCESSING"
 
-        risk_level  = movement_result.get("risk_level", "LOW")
-        risk_score  = movement_result.get("risk_score", 0.0)
-        confidence  = movement_result.get("confidence", 0.70)
-        species     = sighting.get("species", "Unknown")
-        distance_km = sighting.get("distance_km", 2.0)
+        risk_level   = movement_result.get("risk_level", "LOW")
+        risk_score   = movement_result.get("risk_score", 0.0)
+        confidence   = movement_result.get("confidence", 0.70)
+        species      = sighting.get("species", "Unknown")
+        distance_km  = sighting.get("distance_km", 2.0)
         village_name = village["name"]
 
         broadcast = risk_level != "LOW"
 
         en_text = self._render_en(risk_level, species, village_name, distance_km)
         gu_text = self._render_gu(risk_level, species, village_name)
+
+        # Use the sighting's own timestamp so alerts generated from historical
+        # sightings reflect when the sighting actually occurred rather than
+        # all sharing the server's startup time.
+        sighting_ts = sighting.get("timestamp") or datetime.utcnow().isoformat()
 
         alert = {
             "alert_id":      f"ALT-{uuid.uuid4().hex[:6].upper()}",
@@ -165,16 +170,17 @@ class AlertAgent:
             "species":       species,
             "risk_score":    risk_score,
             "confidence":    confidence,
+            "distance_km":   distance_km,
             "broadcast":     broadcast,
             "en_text":       en_text,
             "gu_text":       gu_text,
             "safety_actions": _SAFETY_ACTIONS.get(risk_level, _SAFETY_ACTIONS["LOW"]),
-            "timestamp":     datetime.utcnow().isoformat(),
+            "timestamp":     sighting_ts,
             "nlg_note":      "IBM Granite LLM — Natural Language Generation (Proposed Integration — Simulated in Prototype)",
             "agent_meta": {
                 "agent":      self.NAME,
                 "version":    self.VERSION,
-                "timestamp":  datetime.utcnow().isoformat(),
+                "timestamp":  sighting_ts,
                 "disclaimer": "PROTOTYPE — alert text is template-generated",
             },
         }
