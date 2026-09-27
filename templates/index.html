@@ -1386,6 +1386,20 @@
   .radar-box.MEDIUM { border-left-color: var(--medium); background: rgba(245, 158, 11, 0.08); }
   .radar-box.LOW    { border-left-color: var(--low); background: rgba(16, 185, 129, 0.08); }
 
+  @keyframes livePulse {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+  .live-dot-pulse {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    animation: livePulse 1.8s infinite;
+  }
+
   /* Guide card */
   .guide-card {
     background: var(--surface2);
@@ -3590,19 +3604,25 @@
 
       <!-- Radar Status Box -->
       <div id="citizen-radar-box" class="radar-box HIGH mb-3">
-        <div>
-          <div style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;font-weight:700;">CURRENT THREAT LEVEL / હાલનું જોખમ</div>
-          <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+            <div style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;font-weight:700;">CURRENT THREAT LEVEL / હાલનું જોખમ</div>
+            <div id="radar-live-indicator" style="font-size:11px;color:#10b981;font-weight:700;display:flex;align-items:center;gap:6px;">
+              <span class="live-dot-pulse"></span> <span id="radar-live-text">● LIVE WEBSOCKET &amp; 5s AUTO-SYNC</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
             <span id="citizen-radar-badge" class="badge-high" style="font-size:13px;padding:4px 12px;">HIGH RISK (સાવચેત રહો)</span>
             <strong id="citizen-radar-vname" style="font-size:16px;">Sasan Gir (સાસણ ગીર)</strong>
+            <span id="citizen-radar-score" class="badge" style="background:rgba(255,255,255,0.08);color:var(--text-secondary);font-size:11px;font-family:monospace;">RISK: 88%</span>
           </div>
-          <div id="citizen-radar-dist" style="font-size:13px;color:var(--text);margin-top:6px;font-weight:500;">
+          <div id="citizen-radar-dist" style="font-size:13px;color:var(--text);margin-top:8px;font-weight:500;line-height:1.5;">
             ⚠️ Asiatic Lion movement recorded within 0.8 km of village periphery.
           </div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:10px;color:var(--muted);font-weight:700;">UPDATE FREQUENCY</div>
-          <div style="font-size:11.5px;color:var(--primary);font-weight:800;">● LIVE AI RADAR</div>
+          <div id="citizen-radar-meta" style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:15px;flex-wrap:wrap;">
+            <span><i class="bi bi-broadcast me-1 text-primary"></i>Live Sensor &amp; Patrol Telemetry</span>
+            <span id="radar-last-sync-time"><i class="bi bi-clock me-1"></i>Last evaluated: Just now</span>
+          </div>
         </div>
       </div>
 
@@ -3637,9 +3657,13 @@
       <!-- Recent Regional Alerts -->
       <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <span style="font-size:12.5px;font-weight:700;color:var(--text);">Latest Regional Warnings / તાજેતરની ચેતવણીઓ</span>
-          <button class="btn-ghost" style="padding:2px 8px;font-size:10.5px;" onclick="showTab('alerts')">View All in Alerts Tab</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;font-weight:700;color:var(--text);">Latest Regional Warnings / તાજેતરની ચેતવણીઓ</span>
+            <span id="citizen-regional-count" class="badge" style="background:rgba(244,63,94,0.15);color:var(--high);font-size:11px;font-weight:700;">LIVE ALERTS</span>
+          </div>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="showTab('alerts')"><i class="bi bi-card-list me-1"></i>View All in Alerts Console</button>
         </div>
+        <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Official early warning broadcasts issued by Gir Forest Officers &amp; AI early detection nodes.</div>
         <div id="citizen-recent-alerts">Loading regional alerts…</div>
       </div>
 
@@ -4513,11 +4537,11 @@ async function updateVillageRadar() {
   const badge   = document.getElementById('citizen-radar-badge');
   const vnameEl = document.getElementById('citizen-radar-vname');
   const distEl  = document.getElementById('citizen-radar-dist');
+  const scoreEl = document.getElementById('citizen-radar-score');
+  const syncEl  = document.getElementById('radar-last-sync-time');
   const raEl    = document.getElementById('citizen-recent-alerts');
   const agEl    = document.getElementById('citizen-advisory-grid');
-
-  // Loading indicator
-  if (badge) { badge.className = 'badge-low'; badge.textContent = '⏳ Loading…'; }
+  const cntEl   = document.getElementById('citizen-regional-count');
 
   // Helper: parse ISO timestamp safely — append Z to treat as UTC if missing
   const parseTs = ts => {
@@ -4527,74 +4551,120 @@ async function updateVillageRadar() {
   };
 
   try {
-    // Fetch alerts + villages in parallel
+    // Fetch alerts + villages in parallel with no-store cache
     const [alertsRes, villagesRes] = await Promise.all([
       fetch('/api/alerts',   { cache: 'no-store' }).then(r => r.json()),
       fetch('/api/villages', { cache: 'no-store' }).then(r => r.json()),
     ]);
 
-    // All alerts, sorted newest first
     const allAlerts = (alertsRes?.data || []).sort(
       (a, b) => parseTs(b.timestamp) - parseTs(a.timestamp)
     );
     const villages = villagesRes?.data || [];
 
-    // Village metadata from API
-    const village = villages.find(v => v.id === vid) || { name: '—', id: vid, risk_level: 'LOW' };
-
-    // ── THREAT LEVEL for selected village ──────────────────────────────
-    // Look at ALL alerts for this village (no time filter — use all data)
-    const villageAlerts = allAlerts.filter(a => a.village_id === vid);
-
-    let risk = 'LOW';
-    let closestDist = null;
-    let topSpecies  = null;
-    let topAlertTs  = null;
-
+    // ── 1. COMPUTE THREAT LEVEL FOR EVERY VILLAGE & UPDATE DROPDOWN ──
+    const villageThreatMap = {};
     const sevOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-    for (const a of villageAlerts) {
-      const s = (a.severity || 'LOW').toUpperCase();
-      if ((sevOrder[s] || 1) > (sevOrder[risk] || 1)) {
-        risk = s === 'CRITICAL' ? 'HIGH' : s;
+
+    villages.forEach(v => {
+      const vAlerts = allAlerts.filter(a => {
+        if (a.village_id && a.village_id === v.id) return true;
+        if (a.village_name && v.name && (
+          a.village_name.toLowerCase().includes(v.name.toLowerCase().split(' ')[0]) ||
+          v.name.toLowerCase().includes(a.village_name.toLowerCase().split(' ')[0])
+        )) return true;
+        return false;
+      });
+
+      let vRisk = (v.risk_level || 'LOW').toUpperCase();
+      let vDist = null;
+      let vSpecies = null;
+      let vTopTs = null;
+      let vRiskScore = v.risk_score || (vRisk === 'HIGH' ? 0.85 : vRisk === 'MEDIUM' ? 0.55 : 0.25);
+
+      for (const a of vAlerts) {
+        const s = (a.severity || 'LOW').toUpperCase();
+        if ((sevOrder[s] || 1) > (sevOrder[vRisk] || 1)) {
+          vRisk = s === 'CRITICAL' ? 'HIGH' : s;
+        }
+        const d = parseFloat(a.distance_km);
+        if (!isNaN(d) && (vDist === null || d < vDist)) {
+          vDist = d;
+          vSpecies = a.species;
+          vTopTs = a.timestamp;
+          if (a.risk_score) vRiskScore = a.risk_score;
+        }
       }
-      const dist = parseFloat(a.distance_km);
-      if (!isNaN(dist) && (closestDist === null || dist < closestDist)) {
-        closestDist = dist;
-        topSpecies  = a.species;
-        topAlertTs  = a.timestamp;
-      }
+      villageThreatMap[v.id] = {
+        risk: vRisk,
+        dist: vDist,
+        species: vSpecies,
+        score: vRiskScore,
+        topTs: vTopTs,
+        count: vAlerts.length
+      };
+    });
+
+    // Update <select> options with live threat status
+    if (sel && sel.options.length) {
+      const currentSelectedVal = sel.value;
+      villages.forEach(v => {
+        let opt = sel.querySelector(`option[value="${v.id}"]`);
+        const threat = villageThreatMap[v.id] || { risk: 'LOW' };
+        const icon = threat.risk === 'HIGH' ? '🔴' : threat.risk === 'MEDIUM' ? '🟡' : '🟢';
+        const distStr = threat.dist != null ? ` [${threat.dist.toFixed(1)} km]` : '';
+        const optLabel = `${icon} ${v.name} — ${threat.risk} RISK${distStr}`;
+        if (opt) {
+          opt.textContent = optLabel;
+        }
+      });
+      sel.value = currentSelectedVal;
     }
 
-    // Fallback: use risk_level from /api/villages if no alerts found for this village
-    if (!villageAlerts.length) {
-      risk = ((village.risk_level) || 'LOW').toUpperCase();
-      if (risk === 'CRITICAL') risk = 'HIGH';
-    }
+    // ── 2. SELECTED VILLAGE THREAT LEVEL ─────────────────────────────
+    const village = villages.find(v => v.id === vid) || { name: '—', id: vid, risk_level: 'LOW' };
+    const threat = villageThreatMap[vid] || { risk: (village.risk_level || 'LOW').toUpperCase(), dist: null, species: null, score: 0.25 };
+    const risk = threat.risk || 'LOW';
 
-    // ── Update radar box ───────────────────────────────────────────────
+    // Update radar box CSS class
     if (box) box.className = `radar-box ${risk} mb-3`;
 
+    // Update badge
     const badgeLabels  = { HIGH: 'HIGH RISK (સાવચેત રહો)', MEDIUM: 'MEDIUM RISK (મધ્યમ જોખમ)', LOW: 'LOW RISK (સામાન્ય)' };
     const badgeClasses = { HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low' };
     if (badge) {
-      badge.className   = badgeClasses[risk] || 'badge-low';
+      badge.className     = badgeClasses[risk] || 'badge-low';
       badge.style.cssText = 'font-size:13px;padding:4px 12px;';
-      badge.textContent = badgeLabels[risk] || 'LOW RISK';
+      badge.textContent   = badgeLabels[risk] || 'LOW RISK (સામાન્ય)';
     }
 
+    // Update village name
     if (vnameEl) vnameEl.textContent = village.name || vid;
 
+    // Update risk score
+    if (scoreEl) {
+      const scorePct = Math.round((threat.score || 0.5) * 100);
+      scoreEl.textContent = `RISK: ${scorePct}%`;
+      scoreEl.style.color = risk === 'HIGH' ? 'var(--high)' : risk === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
+    }
+
+    // Update distance & species description
     if (distEl) {
-      if (risk === 'LOW' || !topSpecies) {
-        distEl.innerHTML = '✅ No active wildlife threat recorded near this village.';
+      if (risk === 'LOW' || !threat.species) {
+        distEl.innerHTML = '✅ No active wildlife threat recorded near this village perimeter.';
       } else {
-        const distText = closestDist != null ? `${closestDist.toFixed(1)} km` : 'nearby';
-        const when     = topAlertTs ? ` · <em>${timeAgo(topAlertTs)}</em>` : '';
-        distEl.innerHTML = `⚠️ <strong>${topSpecies}</strong> movement recorded within <strong>${distText}</strong> of village perimeter${when}.`;
+        const distText = threat.dist != null ? `${threat.dist.toFixed(1)} km` : 'nearby';
+        const when = threat.topTs ? ` · <em>${timeAgo(threat.topTs)}</em>` : '';
+        distEl.innerHTML = `⚠️ <strong>${threat.species}</strong> movement recorded within <strong>${distText}</strong> of village perimeter${when}.`;
       }
     }
 
-    // ── Advisory cards — change per threat level ───────────────────────
+    // Update last sync time
+    if (syncEl) {
+      syncEl.innerHTML = `<i class="bi bi-clock me-1"></i>Last evaluated: ${new Date().toLocaleTimeString()} (Auto-refresh: 5s)`;
+    }
+
+    // ── 3. ADVISORY CARDS PER THREAT LEVEL ───────────────────────────
     if (agEl) {
       agEl.innerHTML = (_ADVISORY[risk] || _ADVISORY.LOW).map(c => `
         <div class="advisory-mini-card">
@@ -4606,36 +4676,47 @@ async function updateVillageRadar() {
         </div>`).join('');
     }
 
-    // ── Latest Regional Warnings — show ALL alerts (all villages, newest first) ──
+    // ── 4. LATEST REGIONAL WARNINGS (ALL ALERTS LIST) ────────────────
+    if (cntEl) {
+      cntEl.textContent = `${allAlerts.length} LIVE WARNINGS`;
+    }
+
     if (raEl) {
       if (allAlerts.length) {
-        raEl.innerHTML = allAlerts.slice(0, 8).map(a => {
+        raEl.innerHTML = allAlerts.map(a => {
           const sev  = (a.severity || 'LOW').toUpperCase();
           const col  = sev === 'HIGH' ? 'var(--high)' : sev === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
           const icon = sev === 'HIGH' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🟢';
+          const distStr = a.distance_km != null ? `📍 ${parseFloat(a.distance_km).toFixed(1)} km away` : '';
+          const spIcon = speciesIcon ? speciesIcon(a.species) : '🐾';
           return `
-          <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid ${col};">
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;flex-wrap:wrap;gap:4px;">
-              <div style="display:flex;align-items:center;gap:6px;">
+          <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:10px;border-left:4px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <span>${icon}</span>
-                <strong>${a.village_name || '—'}</strong>
-                <span style="color:var(--muted);">· ${a.species || ''}</span>
-                <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:1px 6px;">${sev}</span>
+                <strong style="font-size:13.5px;color:var(--text);">${a.village_name || '—'}</strong>
+                <span style="color:var(--muted);">· ${spIcon} ${a.species || ''}</span>
+                <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:2px 7px;">${sev} RISK</span>
+                <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:9.5px;padding:2px 6px;border:1px solid rgba(16,185,129,0.3);"><i class="bi bi-shield-check me-1"></i>Officer Broadcast</span>
               </div>
-              <span style="color:var(--muted);font-size:10.5px;white-space:nowrap;">${timeAgo(a.timestamp)}</span>
+              <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);">
+                <span>${distStr}</span>
+                <span><i class="bi bi-clock me-1"></i>${timeAgo(a.timestamp)}</span>
+              </div>
             </div>
-            <div style="font-size:12px;margin-top:5px;color:var(--text-secondary);line-height:1.45;">${a.en_text || ''}</div>
+            <div style="font-size:12.5px;color:var(--text);line-height:1.5;">${a.en_text || a.message || ''}</div>
+            ${a.gu_text ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;font-style:italic;line-height:1.45;">${a.gu_text}</div>` : ''}
           </div>`;
         }).join('');
       } else {
-        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:10px;">No regional alerts on record yet.</div>`;
+        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center;">No regional warnings on record yet. ✅ All sectors clear.</div>`;
       }
     }
 
   } catch (err) {
     console.error('Radar fetch error:', err);
     if (badge) { badge.className = 'badge-low'; badge.textContent = 'RADAR OFFLINE'; }
-    if (distEl) distEl.textContent = 'Could not load live data. Please try refreshing the page.';
+    if (distEl) distEl.textContent = 'Could not load live threat data. Please check network connection.';
   }
 }
 
@@ -6118,7 +6199,7 @@ async function _crossDeviceSyncTick() {
     if (serverTs > _syncLastKnown) {
       _syncLastKnown = serverTs;
       // Refresh whichever section is currently visible
-      const activePage = document.querySelector('.tab-content.active');
+      const activePage = document.querySelector('.page.active');
       const pageId = activePage ? activePage.id : '';
       if (pageId === 'page-dashboard')   { loadDashboard(false); }
       if (pageId === 'page-alerts')      { if (typeof loadAlerts      === 'function') loadAlerts(); }
@@ -6127,10 +6208,7 @@ async function _crossDeviceSyncTick() {
       if (pageId === 'page-compensation'){ if (typeof loadClaims      === 'function') loadClaims(); }
       // Citizen Safety Radar — refresh threat level in real time
       if (pageId === 'page-citizen') {
-        const radarView = document.getElementById('view-citizen-radar');
-        if (radarView && radarView.style.display !== 'none') {
-          updateVillageRadar();
-        }
+        updateVillageRadar();
       }
       // Show a subtle "Data updated" toast so user knows sync happened
       if (typeof showToast === 'function') {
@@ -6141,6 +6219,81 @@ async function _crossDeviceSyncTick() {
 }
 
 setInterval(_crossDeviceSyncTick, 3000);
+
+// ── 5-SECOND PERIODIC API RECALL ───────────────────────────────────────────
+// Automatically recalls the API every 5 seconds to guarantee the citizen
+// threat level and regional warnings are always dynamic and fresh.
+setInterval(() => {
+  const citizenPage = document.getElementById('page-citizen');
+  if (citizenPage && citizenPage.classList.contains('active')) {
+    updateVillageRadar();
+  }
+}, 5000);
+
+// ── LIVE WEBSOCKET (websocat & browser compatible) ─────────────────────────
+let _vanrakshakWS = null;
+
+function initLiveWebSocket() {
+  const isHttps = window.location.protocol === 'https:';
+  const proto = isHttps ? 'wss:' : 'ws:';
+  const host = window.location.hostname || 'localhost';
+  const wsUrl = `${proto}//${host}:8765`;
+
+  try {
+    _vanrakshakWS = new WebSocket(wsUrl);
+    _vanrakshakWS.onopen = () => {
+      console.log('📡 Connected to VanRakshak Live WebSocket on port 8765');
+      const badge = document.getElementById('radar-live-text');
+      if (badge) badge.innerHTML = '● LIVE (WEBSOCKET CONNECTED)';
+    };
+    _vanrakshakWS.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        console.log('⚡ WebSocket Live Push Event:', payload);
+        // Instantly refresh threat level & alerts
+        updateVillageRadar();
+        if (typeof loadAlerts === 'function') loadAlerts();
+        if (typeof loadDashboard === 'function') loadDashboard(false);
+        if (payload.type === 'THREAT_UPDATE' && typeof showToast === 'function') {
+          showToast('⚡ Live WebSocket: Wildlife threat status updated!', 'info', 2500);
+        }
+      } catch (_) {}
+    };
+    _vanrakshakWS.onerror = () => {
+      const badge = document.getElementById('radar-live-text');
+      if (badge) badge.innerHTML = '● LIVE (SSE STREAM &amp; 5s SYNC)';
+      initSSE();
+    };
+    _vanrakshakWS.onclose = () => {
+      // Auto-reconnect after 4s
+      setTimeout(initLiveWebSocket, 4000);
+    };
+  } catch (_) {
+    initSSE();
+  }
+}
+
+// SSE fallback stream on port 5000 over standard HTTP
+let _sseStream = null;
+function initSSE() {
+  if (typeof EventSource === 'undefined' || _sseStream) return;
+  try {
+    _sseStream = new EventSource('/api/events');
+    _sseStream.onmessage = (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.type === 'THREAT_UPDATE') {
+          updateVillageRadar();
+          if (typeof loadAlerts === 'function') loadAlerts();
+          if (typeof loadDashboard === 'function') loadDashboard(false);
+        }
+      } catch (_) {}
+    };
+  } catch (_) {}
+}
+
+// Start live WebSocket stream immediately
+initLiveWebSocket();
 
 // ── ALERTS ───────────────────────────────────────────────────
 let _rawAlerts = [];

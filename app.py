@@ -1,6 +1,6 @@
 # ============================================================
-# VanRakshak AI — Flask Application Entry Point
-# Human-Wildlife Conflict Mitigation Platform — Gir Forest
+# VanRakshak AI ΓÇö Flask Application Entry Point
+# Human-Wildlife Conflict Mitigation Platform ΓÇö Gir Forest
 # PROTOTYPE / DEMO VERSION
 # Run: python app.py
 # ============================================================
@@ -12,7 +12,11 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 import time
-from flask import Flask, jsonify, request, render_template
+import json
+import asyncio
+import threading
+import websockets
+from flask import Flask, jsonify, request, render_template, Response
 from agents.orchestrator import Orchestrator
 from agents.compensation_agent import CompensationAgent
 
@@ -22,14 +26,93 @@ app.config["JSON_SORT_KEYS"] = False
 # Single orchestrator instance (in-memory state)
 orch = Orchestrator()
 
-# Cross-device sync — bumped whenever data changes (sightings, alerts, incidents)
+# Cross-device sync ΓÇö bumped whenever data changes (sightings, alerts, incidents)
 _last_updated: float = time.time()
 
+# ---------------------------------------------------------------------------
+# WebSocket Server for Real-Time Threat Updates (ws://0.0.0.0:8765)
+# Compatible with browser WebSocket and CLI tools like websocat
+# ---------------------------------------------------------------------------
+WS_CLIENTS = set()
+_ws_loop = None
 
-def _touch():
-    """Bump the global last-updated timestamp so polling clients can detect changes."""
+async def _ws_handler(websocket):
+    WS_CLIENTS.add(websocket)
+    try:
+        welcome = {
+            "type": "INIT",
+            "server": "VanRakshak AI Live Stream",
+            "timestamp": time.time(),
+            "last_updated": _last_updated,
+            "message": "Connected to real-time wildlife threat stream"
+        }
+        await websocket.send(json.dumps(welcome))
+        async for raw in websocket:
+            try:
+                data = json.loads(raw)
+                if data.get("type") == "PING":
+                    await websocket.send(json.dumps({"type": "PONG", "timestamp": time.time()}))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    finally:
+        WS_CLIENTS.discard(websocket)
+
+async def _ws_main():
+    global _ws_loop
+    _ws_loop = asyncio.get_running_loop()
+    try:
+        async with websockets.serve(_ws_handler, "0.0.0.0", 8765):
+            print("  ≡ƒôí WebSocket stream active on ws://0.0.0.0:8765 (websocat ready)")
+            await asyncio.Future()
+    except Exception as e:
+        print(f"  ΓÜá∩╕Å WebSocket server notice: {e}")
+
+def _start_ws_server():
+    def _run():
+        try:
+            asyncio.run(_ws_main())
+        except Exception as e:
+            print(f"  ΓÜá∩╕Å WS thread exited: {e}")
+    t = threading.Thread(target=_run, daemon=True, name="VanRakshak-WS")
+    t.start()
+
+# Launch WebSocket server in background
+_start_ws_server()
+
+def _broadcast_ws(payload: dict):
+    """Broadcast JSON message to all connected WebSocket clients (browsers & websocat)."""
+    if not WS_CLIENTS or not _ws_loop:
+        return
+    msg = json.dumps(payload)
+    async def _send():
+        disconnected = set()
+        for ws in list(WS_CLIENTS):
+            try:
+                await ws.send(msg)
+            except Exception:
+                disconnected.add(ws)
+        for ws in disconnected:
+            WS_CLIENTS.discard(ws)
+    try:
+        if _ws_loop.is_running():
+            asyncio.run_coroutine_threadsafe(_send(), _ws_loop)
+    except Exception:
+        pass
+
+
+def _touch(event_type="UPDATE", details=None):
+    """Bump the global last-updated timestamp and broadcast to all WebSocket clients."""
     global _last_updated
     _last_updated = time.time()
+    payload = {
+        "type": "THREAT_UPDATE",
+        "event": event_type,
+        "timestamp": _last_updated,
+        "details": details or {}
+    }
+    _broadcast_ws(payload)
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +137,7 @@ def index():
 
 
 # ===========================================================================
-# Officer In-Memory Authentication (Demo / Prototype — No Database Required)
+# Officer In-Memory Authentication (Demo / Prototype ΓÇö No Database Required)
 # ===========================================================================
 
 DEMO_OFFICERS = {
@@ -116,7 +199,7 @@ def api_officer_logout():
 
 
 # ===========================================================================
-# Cross-Device Sync — Lightweight update check
+# Cross-Device Sync ΓÇö Lightweight update check
 # ===========================================================================
 
 @app.route("/api/updates/check")
@@ -125,6 +208,21 @@ def api_updates_check():
     if the value has changed since their last check, they trigger a full reload.
     This avoids hammering heavier endpoints like /api/dashboard constantly."""
     return _ok({"last_updated": _last_updated})
+
+
+@app.route("/api/events")
+def api_events():
+    """Server-Sent Events (SSE) live push stream over standard HTTP (port 5000).
+    Dual-layer fallback when WebSocket port 8765 cannot be reached."""
+    def event_stream():
+        last = _last_updated
+        yield f"data: {json.dumps({'type': 'CONNECTED', 'last_updated': _last_updated})}\n\n"
+        while True:
+            time.sleep(1.0)
+            if _last_updated > last:
+                last = _last_updated
+                yield f"data: {json.dumps({'type': 'THREAT_UPDATE', 'last_updated': _last_updated})}\n\n"
+    return Response(event_stream(), mimetype="text/event-stream")
 
 
 # ===========================================================================
@@ -315,25 +413,25 @@ def api_alert_generate():
     from agents.alert_agent import _SAFETY_ACTIONS, _FOREST_CONTACT
 
     guj_species = {
-        "Asiatic Lion": "સિંહ",
-        "Leopard": "દીપડો",
-        "Hyena": "ઝરખ",
-        "Wild Boar": "જંગલી ભૂંડ",
+        "Asiatic Lion": "α¬╕α¬┐α¬éα¬╣",
+        "Leopard": "α¬ªα½Çα¬¬α¬íα½ï",
+        "Hyena": "α¬¥α¬░α¬û",
+        "Wild Boar": "α¬£α¬éα¬ùα¬▓α½Ç α¬¡α½éα¬éα¬í",
     }.get(species, species)
 
     if user_msg and str(user_msg).strip():
         en_text = str(user_msg).strip()
     else:
         en_text = (
-            f"{sev} RISK ALERT — A {species.lower()} has been sighted near {village_name} "
+            f"{sev} RISK ALERT ΓÇö A {species.lower()} has been sighted near {village_name} "
             f"({dist:.1f} km away). Keep all livestock secured indoors. Do NOT venture outside after dark. "
             f"Stay in groups. Contact Forest Dept: {_FOREST_CONTACT}."
         )
 
     gu_text = (
-        f"⚠️ {('ઉચ્ચ જોખમ' if sev == 'HIGH' else 'સાધારણ' if sev == 'MEDIUM' else 'સામાન્ય')} ચેતવણી: "
-        f"{village_name} નજીક {guj_species} ની હિલચાલ નોંધાઈ છે ({dist:.1f} કિમી). "
-        f"તમારા પ્રાણીઓને સુરક્ષિત રાખો. રાત્રે બહાર ન નીકળો. વન વિભાગ: {_FOREST_CONTACT}."
+        f"ΓÜá∩╕Å {('α¬ëα¬Üα½ìα¬Ü α¬£α½ïα¬ûα¬«' if sev == 'HIGH' else 'α¬╕α¬╛α¬ºα¬╛α¬░α¬ú' if sev == 'MEDIUM' else 'α¬╕α¬╛α¬«α¬╛α¬¿α½ìα¬»')} α¬Üα½çα¬ñα¬╡α¬úα½Ç: "
+        f"{village_name} α¬¿α¬£α½Çα¬ò {guj_species} α¬¿α½Ç α¬╣α¬┐α¬▓α¬Üα¬╛α¬▓ α¬¿α½ïα¬éα¬ºα¬╛α¬ê α¬¢α½ç ({dist:.1f} α¬òα¬┐α¬«α½Ç). "
+        f"α¬ñα¬«α¬╛α¬░α¬╛ α¬¬α½ìα¬░α¬╛α¬úα½Çα¬ôα¬¿α½ç α¬╕α½üα¬░α¬òα½ìα¬╖α¬┐α¬ñ α¬░α¬╛α¬ûα½ï. α¬░α¬╛α¬ñα½ìα¬░α½ç α¬¼α¬╣α¬╛α¬░ α¬¿ α¬¿α½Çα¬òα¬│α½ï. α¬╡α¬¿ α¬╡α¬┐α¬¡α¬╛α¬ù: {_FOREST_CONTACT}."
     )
 
     alert = {
@@ -350,7 +448,7 @@ def api_alert_generate():
         "gu_text": gu_text,
         "safety_actions": _SAFETY_ACTIONS.get(sev, _SAFETY_ACTIONS["LOW"]),
         "timestamp": datetime.utcnow().isoformat(),
-        "nlg_note": "IBM Granite LLM — Natural Language Generation (Proposed Integration — Simulated in Prototype)",
+        "nlg_note": "IBM Granite LLM ΓÇö Natural Language Generation (Proposed Integration ΓÇö Simulated in Prototype)",
         "agent_meta": {
             "agent": "AlertAgent",
             "version": "1.0-DYNAMIC",
@@ -562,7 +660,7 @@ def api_audit_log():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  VanRakshak AI — Human-Wildlife Conflict Mitigation")
+    print("  VanRakshak AI ΓÇö Human-Wildlife Conflict Mitigation")
     print("  Gir Forest Prototype | DEMO MODE")
     print("  Open: http://localhost:5000")
     print("=" * 60)
