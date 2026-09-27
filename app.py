@@ -44,6 +44,68 @@ def index():
 
 
 # ===========================================================================
+# Officer In-Memory Authentication (Demo / Prototype — No Database Required)
+# ===========================================================================
+
+DEMO_OFFICERS = {
+    "admin@1234": {
+        "password": "harshil",
+        "name": "Harshil Patil",
+        "role": "Chief Range Forest Officer & Administrator",
+        "badge": "GJ-FOR-CW-001",
+        "division": "Gir National Park & Sanctuary",
+        "station": "Sasan Gir HQ",
+        "access_level": "LEVEL-5 (FULL COMMAND ACCESS)"
+    }
+}
+
+
+@app.route("/api/officer/login", methods=["POST"])
+def api_officer_login():
+    """Authenticate forest officer against in-memory demo accounts."""
+    data = request.get_json(silent=True) or {}
+    officer_id = str(data.get("officer_id") or data.get("username") or "").strip().lower()
+    password = str(data.get("password") or "").strip()
+
+    if not officer_id or not password:
+        return _err("Please provide both Officer ID and Password", 400)
+
+    officer = DEMO_OFFICERS.get(officer_id)
+    if officer and officer["password"] == password:
+        profile = {k: v for k, v in officer.items() if k != "password"}
+        profile["officer_id"] = officer_id
+        return _ok({
+            "authenticated": True,
+            "officer": profile,
+            "token": f"vr-demo-token-{officer_id}",
+            "message": f"Welcome, {profile['name']} ({profile['role']})"
+        })
+    return _err("Invalid Officer ID or Password. Please check demo credentials.", 401)
+
+
+@app.route("/api/officer/verify", methods=["GET"])
+def api_officer_verify():
+    """Return available demo officer profiles for quick evaluation."""
+    demo_accounts = [
+        {
+            "id": k,
+            "name": v["name"],
+            "role": v["role"],
+            "badge": v["badge"],
+            "division": v["division"]
+        }
+        for k, v in DEMO_OFFICERS.items()
+    ]
+    return _ok({"status": "ready", "accounts": demo_accounts})
+
+
+@app.route("/api/officer/logout", methods=["POST"])
+def api_officer_logout():
+    """Log out officer session."""
+    return _ok({"authenticated": False, "message": "Officer signed out successfully."})
+
+
+# ===========================================================================
 # Dashboard
 # ===========================================================================
 
@@ -84,10 +146,58 @@ def api_sightings_get():
 @app.route("/api/sightings", methods=["POST"])
 def api_sightings_post():
     data = request.get_json(silent=True) or {}
-    required = ["species", "lat", "lon", "nearest_village", "distance_km", "time_of_day"]
-    for field in required:
-        if field not in data:
-            return _err(f"Missing required field: {field}")
+    if "species" not in data:
+        return _err("Missing required field: species")
+
+    lat = data.get("lat")
+    lon = data.get("lon")
+    nearest_village = data.get("nearest_village")
+
+    from agents.response_agent import _haversine as haversine_km
+
+    if (lat is not None and lon is not None) and not nearest_village:
+        best_v = None
+        min_d = 9999.0
+        for v in orch.villages:
+            d = haversine_km(float(lat), float(lon), v["lat"], v["lon"])
+            if d < min_d:
+                min_d = d
+                best_v = v
+        if best_v:
+            data["nearest_village"] = best_v["id"]
+            if "distance_km" not in data:
+                data["distance_km"] = round(min_d, 2)
+    elif nearest_village and (lat is None or lon is None):
+        v = next((x for x in orch.villages if x["id"] == nearest_village), None)
+        if v:
+            data["lat"] = v["lat"]
+            data["lon"] = v["lon"]
+            if "distance_km" not in data:
+                data["distance_km"] = 1.0
+
+    if "distance_km" not in data:
+        data["distance_km"] = 1.0
+    if "time_of_day" not in data:
+        import datetime
+        h = datetime.datetime.now().hour
+        if 5 <= h < 8:
+            data["time_of_day"] = "dawn"
+        elif 8 <= h < 17:
+            data["time_of_day"] = "day"
+        elif 17 <= h < 20:
+            data["time_of_day"] = "dusk"
+        else:
+            data["time_of_day"] = "night"
+
+    if "lat" not in data or "lon" not in data or "nearest_village" not in data:
+        return _err("Missing location coordinates or nearest village")
+
+    try:
+        data["lat"] = float(data["lat"])
+        data["lon"] = float(data["lon"])
+        data["distance_km"] = float(data["distance_km"])
+    except (ValueError, TypeError):
+        return _err("Invalid coordinate or distance values")
 
     pipeline_result = orch.process_sighting(data)
     return _ok(pipeline_result), 201
@@ -131,7 +241,7 @@ def api_alerts():
         ma = MovementAgent()
         aa = AlertAgent()
         village_map = {v["id"]: v for v in VILLAGES}
-        for s in SIGHTINGS[:5]:
+        for s in SIGHTINGS[:20]:
             v = village_map.get(s["nearest_village"])
             if not v:
                 continue
@@ -143,24 +253,125 @@ def api_alerts():
 
 @app.route("/api/alerts/generate", methods=["POST"])
 def api_alert_generate():
-    """Generate a new alert for a given village/sighting combo."""
+    """Generate a new dynamic alert for a given village/sighting or user input."""
+    import uuid
+    from datetime import datetime
+
     data = request.get_json(silent=True) or {}
-    village_id  = data.get("village_id", "V001")
-    sighting_id = data.get("sighting_id")
+    village_id   = data.get("village_id")
+    village_name = data.get("village_name")
+    species      = data.get("species")
+    severity     = data.get("severity")
+    distance_km  = data.get("distance_km")
+    user_msg     = data.get("message")
 
-    village = next((v for v in orch.villages if v["id"] == village_id), orch.villages[0])
-    sighting = (
-        next((s for s in orch.sightings if s["id"] == sighting_id), None)
-        if sighting_id
-        else orch.sightings[0]
+    village = None
+    if village_id:
+        village = next((v for v in orch.villages if v["id"] == village_id), None)
+    if not village and village_name:
+        village = next((v for v in orch.villages if v["name"].strip().lower() == str(village_name).strip().lower()), None)
+    if not village:
+        village = orch.villages[0]
+
+    village_name = village["name"]
+
+    if not species:
+        sighting_id = data.get("sighting_id")
+        s = next((x for x in orch.sightings if x["id"] == sighting_id), orch.sightings[0] if orch.sightings else None)
+        species = s.get("species", "Asiatic Lion") if s else "Asiatic Lion"
+
+    try:
+        dist = round(float(distance_km), 1) if distance_km is not None else 0.8
+    except (ValueError, TypeError):
+        dist = 0.8
+
+    sev = (severity or ("HIGH" if dist <= 1.0 else "MEDIUM" if dist <= 2.5 else "LOW")).upper()
+    confidence = 0.95 if sev == "HIGH" else 0.85 if sev == "MEDIUM" else 0.76
+
+    from agents.alert_agent import _SAFETY_ACTIONS, _FOREST_CONTACT
+
+    guj_species = {
+        "Asiatic Lion": "સિંહ",
+        "Leopard": "દીપડો",
+        "Hyena": "ઝરખ",
+        "Wild Boar": "જંગલી ભૂંડ",
+    }.get(species, species)
+
+    if user_msg and str(user_msg).strip():
+        en_text = str(user_msg).strip()
+    else:
+        en_text = (
+            f"{sev} RISK ALERT — A {species.lower()} has been sighted near {village_name} "
+            f"({dist:.1f} km away). Keep all livestock secured indoors. Do NOT venture outside after dark. "
+            f"Stay in groups. Contact Forest Dept: {_FOREST_CONTACT}."
+        )
+
+    gu_text = (
+        f"⚠️ {('ઉચ્ચ જોખમ' if sev == 'HIGH' else 'સાધારણ' if sev == 'MEDIUM' else 'સામાન્ય')} ચેતવણી: "
+        f"{village_name} નજીક {guj_species} ની હિલચાલ નોંધાઈ છે ({dist:.1f} કિમી). "
+        f"તમારા પ્રાણીઓને સુરક્ષિત રાખો. રાત્રે બહાર ન નીકળો. વન વિભાગ: {_FOREST_CONTACT}."
     )
-    if not sighting:
-        return _err("No sighting found")
 
-    from agents.movement_agent import MovementAgent
-    mv_result = MovementAgent().process(sighting, village, orch.sightings, orch.incidents)
-    alert     = orch.alert_agent.process(mv_result, sighting, village)
-    orch.alerts.append(alert)
+    alert = {
+        "alert_id": f"ALT-{uuid.uuid4().hex[:6].upper()}",
+        "severity": sev,
+        "village_id": village["id"],
+        "village_name": village_name,
+        "species": species,
+        "risk_score": 0.88 if sev == "HIGH" else 0.58 if sev == "MEDIUM" else 0.28,
+        "confidence": confidence,
+        "distance_km": dist,
+        "broadcast": sev != "LOW",
+        "en_text": en_text,
+        "gu_text": gu_text,
+        "safety_actions": _SAFETY_ACTIONS.get(sev, _SAFETY_ACTIONS["LOW"]),
+        "timestamp": datetime.utcnow().isoformat(),
+        "nlg_note": "IBM Granite LLM — Natural Language Generation (Proposed Integration — Simulated in Prototype)",
+        "agent_meta": {
+            "agent": "AlertAgent",
+            "version": "1.0-DYNAMIC",
+            "timestamp": datetime.utcnow().isoformat(),
+            "disclaimer": "Dynamic Alert broadcast via Officer Console",
+        },
+    }
+
+    # Prepend to alerts list so newest appears first
+    orch.alerts.insert(0, alert)
+
+    # Dynamically log new sighting and incident
+    new_sighting = {
+        "id": f"S{len(orch.sightings)+1:03d}",
+        "species": species,
+        "lat": round(village["lat"] + 0.005, 4),
+        "lon": round(village["lon"] + 0.005, 4),
+        "nearest_village": village["id"],
+        "distance_km": dist,
+        "timestamp": datetime.utcnow().isoformat(),
+        "time_of_day": "night",
+        "observer": "Officer Alert Console",
+        "notes": f"Broadcast Alert: {species} near {village_name} ({dist}km)",
+        "verified": True,
+    }
+    orch.sightings.insert(0, new_sighting)
+
+    if sev in ("HIGH", "MEDIUM"):
+        new_inc = {
+            "id": f"INC{len(orch.incidents)+1:03d}",
+            "display_id": f"INC-{len(orch.incidents)+1:03d}",
+            "village_id": village["id"],
+            "village_name": village_name,
+            "species": species,
+            "severity": sev,
+            "risk_score": alert["risk_score"],
+            "status": "NEW",
+            "timestamp": datetime.utcnow().isoformat(),
+            "recommended_team": "Rapid Response Team Alpha" if sev == "HIGH" else "Patrol Unit B",
+            "incident_type": "WILDLIFE_SIGHTING",
+            "notes": en_text,
+        }
+        orch.incidents.insert(0, new_inc)
+
+    orch._log("AlertAgent", f"Generated & Broadcast {sev} alert for {village_name} ({species})", confidence)
     return _ok(alert), 201
 
 
@@ -248,6 +459,55 @@ def api_required_docs():
     return _ok(CompensationAgent.get_required_docs())
 
 
+@app.route("/api/compensation/claim/<claim_id>", methods=["GET"])
+def api_claim_get(claim_id):
+    claim = orch.get_claim_by_id(claim_id)
+    if not claim:
+        return _err(f"Claim {claim_id} not found", 404)
+    return _ok(claim)
+
+
+# ===========================================================================
+# Citizen Emergency SOS
+# ===========================================================================
+
+@app.route("/api/sos", methods=["POST"])
+def api_sos():
+    data = request.get_json(silent=True) or {}
+    try:
+        lat = float(data.get("lat", 21.1242))
+        lon = float(data.get("lon", 70.5521))
+    except (ValueError, TypeError):
+        lat, lon = 21.1242, 70.5521
+    contact = data.get("contact", "Citizen Emergency")
+    village_id = data.get("village_id", "V001")
+    species = data.get("species", "Asiatic Lion")
+    message = data.get("message", "Immediate distress reported by villager")
+
+    sighting_payload = {
+        "species": species,
+        "lat": lat,
+        "lon": lon,
+        "nearest_village": village_id,
+        "distance_km": 0.3,
+        "time_of_day": "night",
+        "observer": f"Citizen SOS ({contact})",
+        "notes": f"URGENT SOS: {message}",
+        "verified": True,
+    }
+    result = orch.process_sighting(sighting_payload)
+    return _ok({
+        "status": "SOS_BROADCAST",
+        "message": "Forest Department Rapid Response Team notified. Stay in a safe, enclosed area.",
+        "helplines": {
+            "forest_dept_toll_free": "1926",
+            "ambulance": "108",
+            "sasan_gir_control_room": "02877-285541"
+        },
+        "workflow": result
+    }), 201
+
+
 # ===========================================================================
 # Demo scenario
 # ===========================================================================
@@ -278,4 +538,4 @@ if __name__ == "__main__":
     print("  Gir Forest Prototype | DEMO MODE")
     print("  Open: http://localhost:5000")
     print("=" * 60)
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, use_reloader=False, host="0.0.0.0", port=5000)

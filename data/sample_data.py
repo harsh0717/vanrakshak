@@ -134,6 +134,76 @@ SIGHTINGS = [
         "time_of_day": "night", "observer": "Forest Guard Dilip T.",
         "notes": "Male lion at village water trough", "verified": True
     },
+    {
+        "id": "S016", "species": "Leopard",       "lat": 21.3080, "lon": 70.4480,
+        "nearest_village": "V006", "distance_km": 0.7,
+        "timestamp": (_now - timedelta(hours=4)).isoformat(),
+        "time_of_day": "night", "observer": "Camera Trap CT-04",
+        "notes": "Leopard prowling near community water tank", "verified": True
+    },
+    {
+        "id": "S017", "species": "Asiatic Lion",  "lat": 21.3210, "lon": 71.0150,
+        "nearest_village": "V002", "distance_km": 1.1,
+        "timestamp": (_now - timedelta(hours=7)).isoformat(),
+        "time_of_day": "dusk", "observer": "Patrol Team PT-03",
+        "notes": "Two young sub-adult males tracking nilgai herd", "verified": True
+    },
+    {
+        "id": "S018", "species": "Nilgai",        "lat": 20.8350, "lon": 71.0250,
+        "nearest_village": "V005", "distance_km": 1.4,
+        "timestamp": (_now - timedelta(hours=11)).isoformat(),
+        "time_of_day": "morning", "observer": "Farmer Ashwin P.",
+        "notes": "Herd of 6 blue bulls foraging near sugarcane boundary", "verified": True
+    },
+    {
+        "id": "S019", "species": "Mugger Crocodile", "lat": 20.9880, "lon": 70.4490,
+        "nearest_village": "V003", "distance_km": 1.2,
+        "timestamp": (_now - timedelta(hours=15)).isoformat(),
+        "time_of_day": "afternoon", "observer": "Fisherman Govind K.",
+        "notes": "Large crocodile basking on Hiran river bank near check dam", "verified": True
+    },
+    {
+        "id": "S020", "species": "Asiatic Lion",  "lat": 21.3410, "lon": 70.7210,
+        "nearest_village": "V004", "distance_km": 0.9,
+        "timestamp": (_now - timedelta(hours=19)).isoformat(),
+        "time_of_day": "night", "observer": "Forest Guard Mansukh R.",
+        "notes": "Adult lioness with single cub crossing mango orchard", "verified": True
+    },
+    {
+        "id": "S021", "species": "Hyena",         "lat": 21.3320, "lon": 71.0310,
+        "nearest_village": "V002", "distance_km": 1.5,
+        "timestamp": (_now - timedelta(hours=23)).isoformat(),
+        "time_of_day": "dawn", "observer": "Camera Trap CT-14",
+        "notes": "Pair of hyenas near ravine carcass pit", "verified": True
+    },
+    {
+        "id": "S022", "species": "Wild Boar",     "lat": 21.2980, "lon": 70.4420,
+        "nearest_village": "V006", "distance_km": 0.5,
+        "timestamp": (_now - timedelta(hours=28)).isoformat(),
+        "time_of_day": "dusk", "observer": "Village Sarpanch Alert",
+        "notes": "Sounder of 8 wild boars damaging groundnut fencing", "verified": True
+    },
+    {
+        "id": "S023", "species": "Leopard",       "lat": 21.1210, "lon": 70.6220,
+        "nearest_village": "V001", "distance_km": 0.8,
+        "timestamp": (_now - timedelta(hours=33)).isoformat(),
+        "time_of_day": "night", "observer": "Eco-tourism Guide Praveen",
+        "notes": "Leopard resting atop boundary stone wall near Maldhari ness", "verified": True
+    },
+    {
+        "id": "S024", "species": "Hyena",         "lat": 21.5950, "lon": 71.2150,
+        "nearest_village": "V008", "distance_km": 1.8,
+        "timestamp": (_now - timedelta(hours=45)).isoformat(),
+        "time_of_day": "night", "observer": "Thermal Drone TD-01",
+        "notes": "Pack of 3 hyenas howling near outer water storage", "verified": True
+    },
+    {
+        "id": "S025", "species": "Asiatic Lion",  "lat": 20.9990, "lon": 70.4630,
+        "nearest_village": "V003", "distance_km": 0.5,
+        "timestamp": (_now - timedelta(hours=50)).isoformat(),
+        "time_of_day": "night", "observer": "Sensor Node SN-09",
+        "notes": "Territorial roar detected; lion moving toward cattle pen path", "verified": True
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -227,6 +297,118 @@ INCIDENTS = [
         "timestamp": (_now - timedelta(hours=10)).isoformat(),
         "status": "NEW", "assigned_team": None,
         "risk_score": 0.74, "notes": "Child spotted leopard near school path — no injury"
+    },
+    {
+        "id": "INC-012", "village_id": "V001", "species": "Asiatic Lion",
+        "incident_type": "livestock_kill", "severity": "HIGH",
+        "livestock_lost": 1, "livestock_type": "buffalo",
+        "timestamp": (_now - timedelta(hours=12)).isoformat(),
+        "status": "IN_PROGRESS", "assigned_team": "RT-001",
+        "risk_score": 0.86, "notes": "Maldhari ness buffalo calf killed inside fenced enclosure"
+    },
+    {
+        "id": "INC-013", "village_id": "V004", "species": "Leopard",
+        "incident_type": "human_encounter", "severity": "HIGH",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(hours=18)).isoformat(),
+        "status": "NEW", "assigned_team": None,
+        "risk_score": 0.81, "notes": "Farmer spotted leopard in cattle shed attic; village on alert"
+    },
+    {
+        "id": "INC-014", "village_id": "V002", "species": "Wild Boar",
+        "incident_type": "crop_damage", "severity": "MEDIUM",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(days=1)).isoformat(),
+        "status": "ASSIGNED", "assigned_team": "RT-004",
+        "risk_score": 0.52, "notes": "3 acres of mature groundnut destroyed by boar sounder"
+    },
+    {
+        "id": "INC-015", "village_id": "V006", "species": "Asiatic Lion",
+        "incident_type": "livestock_kill", "severity": "HIGH",
+        "livestock_lost": 1, "livestock_type": "cow",
+        "timestamp": (_now - timedelta(days=2)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-002",
+        "risk_score": 0.84, "notes": "Cow predated near forest border grazing zone; team escorted carcass"
+    },
+    {
+        "id": "INC-016", "village_id": "V003", "species": "Mugger Crocodile",
+        "incident_type": "water_source_block", "severity": "MEDIUM",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(days=2, hours=4)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-003",
+        "risk_score": 0.62, "notes": "Crocodile on washing ghat relocated back to deeper reservoir"
+    },
+    {
+        "id": "INC-017", "village_id": "V005", "species": "Nilgai",
+        "incident_type": "crop_damage", "severity": "LOW",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(days=3)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-005",
+        "risk_score": 0.35, "notes": "Cotton crops trampled by 4 nilgai; acoustic deterrent placed"
+    },
+    {
+        "id": "INC-018", "village_id": "V001", "species": "Leopard",
+        "incident_type": "livestock_kill", "severity": "HIGH",
+        "livestock_lost": 2, "livestock_type": "goat",
+        "timestamp": (_now - timedelta(days=3, hours=8)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-001",
+        "risk_score": 0.78, "notes": "Goats taken from open shed; compensation expedited"
+    },
+    {
+        "id": "INC-019", "village_id": "V002", "species": "Hyena",
+        "incident_type": "livestock_kill", "severity": "MEDIUM",
+        "livestock_lost": 1, "livestock_type": "sheep",
+        "timestamp": (_now - timedelta(days=4)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-004",
+        "risk_score": 0.54, "notes": "Sheep killed in outer settlement pasture at dusk"
+    },
+    {
+        "id": "INC-020", "village_id": "V007", "species": "Asiatic Lion",
+        "incident_type": "human_encounter", "severity": "MEDIUM",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(days=5)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-002",
+        "risk_score": 0.60, "notes": "Lion sighted near highway bypass; safely guided back to forest corridor"
+    },
+    {
+        "id": "INC-021", "village_id": "V003", "species": "Leopard",
+        "incident_type": "property_damage", "severity": "MEDIUM",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(days=6)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-003",
+        "risk_score": 0.65, "notes": "Wire mesh fencing damaged while chasing stray dog"
+    },
+    {
+        "id": "INC-022", "village_id": "V004", "species": "Wild Boar",
+        "incident_type": "crop_damage", "severity": "LOW",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(days=7)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-004",
+        "risk_score": 0.38, "notes": "Sugarcane patch trampled along irrigation canal"
+    },
+    {
+        "id": "INC-023", "village_id": "V006", "species": "Asiatic Lion",
+        "incident_type": "human_encounter", "severity": "HIGH",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(hours=8)).isoformat(),
+        "status": "ESCALATED", "assigned_team": "RT-002",
+        "risk_score": 0.89, "notes": "Lion pride lingering near primary school path; thermal drone deployed"
+    },
+    {
+        "id": "INC-024", "village_id": "V001", "species": "Asiatic Lion",
+        "incident_type": "livestock_kill", "severity": "HIGH",
+        "livestock_lost": 1, "livestock_type": "buffalo",
+        "timestamp": (_now - timedelta(days=9)).isoformat(),
+        "status": "RESOLVED", "assigned_team": "RT-001",
+        "risk_score": 0.83, "notes": "Adult milch buffalo killed; forensic post-mortem completed"
+    },
+    {
+        "id": "INC-025", "village_id": "V002", "species": "Leopard",
+        "incident_type": "human_encounter", "severity": "HIGH",
+        "livestock_lost": 0, "livestock_type": None,
+        "timestamp": (_now - timedelta(hours=4)).isoformat(),
+        "status": "NEW", "assigned_team": None,
+        "risk_score": 0.85, "notes": "Leopard entered farm shed; owner trapped inside residence; immediate extraction required"
     },
 ]
 

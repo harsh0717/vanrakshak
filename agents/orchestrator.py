@@ -6,12 +6,12 @@
 
 import copy
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from agents.movement_agent     import MovementAgent
 from agents.alert_agent        import AlertAgent
 from agents.response_agent     import ResponseAgent
-from agents.compensation_agent import CompensationAgent
+from agents.compensation_agent import CompensationAgent, _REQUIRED_DOCS
 from agents.hotspot_agent      import HotspotAgent
 from data.sample_data          import get_all_data
 
@@ -52,6 +52,266 @@ class Orchestrator:
         # Run initial hotspot assessment on seed data
         self._refresh_hotspots()
         self._log("Orchestrator", "System initialised with demo seed data", 1.0)
+
+        # Seed rich demo alerts, approvals, and compensation claims
+        self._seed_demo_state()
+
+    def _seed_demo_state(self):
+        """Seed initial alerts, pending approvals, and compensation claims for realistic demo."""
+        _now = datetime.utcnow()
+        village_map = {v["id"]: v for v in self.villages}
+
+        # 1. Seed 20 alerts across top sightings
+        for s in self.sightings[:20]:
+            v = village_map.get(s["nearest_village"])
+            if v:
+                mv = self.movement_agent.process(s, v, self.sightings, self.incidents)
+                al = self.alert_agent.process(mv, s, v)
+                self.alerts.append(al)
+
+        # 2. Seed pending officer approvals (Human-in-the-Loop)
+        self.pending_approvals = [
+            {
+                "action_id": "APR-101",
+                "action_type": "DISPATCH_TEAM",
+                "incident_id": "INC-011",
+                "ai_recommendation": "Dispatch Talala Rescue Team (RT-003) to Talala for Leopard encounter near primary school path.",
+                "recommended_team": "RT-003",
+                "recommended_team_name": "Talala Rescue Team",
+                "confidence": 0.88,
+                "risk_score": 0.74,
+                "reasoning": "Morning school route encounter. Nearest rapid rescue team is RT-003 (0.9 km). Prioritize perimeter security.",
+                "status": "PENDING",
+                "timestamp": (_now - timedelta(hours=2)).isoformat(),
+                "village_id": "V003",
+            },
+            {
+                "action_id": "APR-102",
+                "action_type": "DISPATCH_TEAM",
+                "incident_id": "INC-023",
+                "ai_recommendation": "Dispatch Mendarda Forest Unit (RT-002) to Mendarda for high-risk Asiatic Lion pride sighting.",
+                "recommended_team": "RT-002",
+                "recommended_team_name": "Mendarda Forest Unit",
+                "confidence": 0.92,
+                "risk_score": 0.89,
+                "reasoning": "Pride of 3 lingering within 400m of village dwellings. Acoustic deterrents and thermal drone escort recommended.",
+                "status": "PENDING",
+                "timestamp": (_now - timedelta(hours=1)).isoformat(),
+                "village_id": "V006",
+            },
+            {
+                "action_id": "APR-103",
+                "action_type": "DISPATCH_TEAM",
+                "incident_id": "INC-025",
+                "ai_recommendation": "Dispatch Dhari Wildlife Squad (RT-004) to Dhari for Leopard entered farm shed.",
+                "recommended_team": "RT-004",
+                "recommended_team_name": "Dhari Wildlife Squad",
+                "confidence": 0.94,
+                "risk_score": 0.85,
+                "reasoning": "Farmer trapped inside residence; predator in shed. Specialized feline capture kit and tranquilizer unit required.",
+                "status": "PENDING",
+                "timestamp": (_now - timedelta(minutes=40)).isoformat(),
+                "village_id": "V002",
+            },
+            {
+                "action_id": "APR-104",
+                "action_type": "DEPLOY_EQUIPMENT",
+                "incident_id": "INC-013",
+                "ai_recommendation": "Deploy Box Trap Cage and Thermal Drone TD-02 in Visavadar mango grove corridor.",
+                "recommended_team": "RT-001",
+                "recommended_team_name": "Sasan Rapid Response",
+                "confidence": 0.85,
+                "risk_score": 0.81,
+                "reasoning": "Repeat leopard incursions recorded over 72h. Passive capture cage prevents livestock loss without harming feline.",
+                "status": "PENDING",
+                "timestamp": (_now - timedelta(hours=3)).isoformat(),
+                "village_id": "V004",
+            },
+            {
+                "action_id": "APR-105",
+                "action_type": "COMPENSATION_CLAIM",
+                "claim_id": "CLM-001",
+                "ai_recommendation": "Approve ₹50,000 compensation payout to Devji Rabari (Sasan Gir) for 2 buffaloes killed by lion.",
+                "confidence": 0.95,
+                "risk_score": 0.82,
+                "reasoning": "All 7 documents verified: Veterinary post-mortem complete, Sarpanch endorsement attached, carcass geotagged.",
+                "status": "PENDING",
+                "timestamp": (_now - timedelta(hours=4)).isoformat(),
+                "village_id": "V001",
+            },
+            {
+                "action_id": "APR-106",
+                "action_type": "COMPENSATION_CLAIM",
+                "claim_id": "CLM-003",
+                "ai_recommendation": "Approve ₹12,000 compensation payout to Khimji B. Solanki (Dhari) for 3 sheep lost to hyena pack.",
+                "confidence": 0.89,
+                "risk_score": 0.55,
+                "reasoning": "Predation confirmed via hair sample and pugmarks. Claimant bank passbook and Aadhaar verified.",
+                "status": "PENDING",
+                "timestamp": (_now - timedelta(hours=5)).isoformat(),
+                "village_id": "V002",
+            },
+        ]
+
+        # 3. Seed realistic compensation claims
+        all_docs = list(_REQUIRED_DOCS)
+        partial_docs = all_docs[:5]
+
+        self.compensation_claims = [
+            {
+                "claim_id": "CLM-001",
+                "incident_id": "INC-001",
+                "claimant_name": "Devji Rabari",
+                "village_id": "V001",
+                "village_name": "Sasan Gir",
+                "species_responsible": "Asiatic Lion",
+                "livestock_type": "buffalo",
+                "livestock_count": 2,
+                "rate_per_animal_inr": 25000,
+                "preliminary_amount_inr": 50000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.95,
+                "status": "PENDING_REVIEW",
+                "timestamp": (_now - timedelta(days=2)).isoformat(),
+                "notes": "2 milch buffaloes predated at night in Maldhari Ness.",
+            },
+            {
+                "claim_id": "CLM-002",
+                "incident_id": "INC-002",
+                "claimant_name": "Bhagwanji Ahir",
+                "village_id": "V003",
+                "village_name": "Talala",
+                "species_responsible": "Leopard",
+                "livestock_type": "goat",
+                "livestock_count": 1,
+                "rate_per_animal_inr": 3500,
+                "preliminary_amount_inr": 3500,
+                "doc_checklist": [{"document": d, "available": d in partial_docs} for d in all_docs],
+                "docs_complete": False,
+                "missing_docs": [d for d in all_docs if d not in partial_docs],
+                "confidence": 0.78,
+                "status": "DRAFT",
+                "timestamp": (_now - timedelta(days=1)).isoformat(),
+                "notes": "Goat dragged into shrubland. Awaiting bank passbook.",
+            },
+            {
+                "claim_id": "CLM-003",
+                "incident_id": "INC-005",
+                "claimant_name": "Khimji B. Solanki",
+                "village_id": "V004",
+                "village_name": "Visavadar",
+                "species_responsible": "Hyena",
+                "livestock_type": "sheep",
+                "livestock_count": 3,
+                "rate_per_animal_inr": 4000,
+                "preliminary_amount_inr": 12000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.90,
+                "status": "PENDING_REVIEW",
+                "timestamp": (_now - timedelta(days=5)).isoformat(),
+                "notes": "3 sheep killed in unprotected pen. Verified by forest guard.",
+            },
+            {
+                "claim_id": "CLM-004",
+                "incident_id": "INC-006",
+                "claimant_name": "Bhavna Patel",
+                "village_id": "V001",
+                "village_name": "Sasan Gir",
+                "species_responsible": "Asiatic Lion",
+                "livestock_type": "cow",
+                "livestock_count": 1,
+                "rate_per_animal_inr": 20000,
+                "preliminary_amount_inr": 20000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.98,
+                "status": "APPROVED",
+                "timestamp": (_now - timedelta(days=7)).isoformat(),
+                "notes": "Direct Benefit Transfer processed to claimant SBI account.",
+            },
+            {
+                "claim_id": "CLM-005",
+                "incident_id": "INC-008",
+                "claimant_name": "Mansukh V. Gohil",
+                "village_id": "V006",
+                "village_name": "Mendarda",
+                "species_responsible": "Leopard",
+                "livestock_type": "goat",
+                "livestock_count": 2,
+                "rate_per_animal_inr": 3500,
+                "preliminary_amount_inr": 7000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.88,
+                "status": "PENDING_REVIEW",
+                "timestamp": (_now - timedelta(days=4)).isoformat(),
+                "notes": "Goats taken from pen near outer wall.",
+            },
+            {
+                "claim_id": "CLM-006",
+                "incident_id": "INC-015",
+                "claimant_name": "Ramji J. Bharwad",
+                "village_id": "V006",
+                "village_name": "Mendarda",
+                "species_responsible": "Asiatic Lion",
+                "livestock_type": "cow",
+                "livestock_count": 1,
+                "rate_per_animal_inr": 20000,
+                "preliminary_amount_inr": 20000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.92,
+                "status": "VERIFIED",
+                "timestamp": (_now - timedelta(days=2)).isoformat(),
+                "notes": "Post-mortem by Talala Veterinary dispensary confirmed lion predation.",
+            },
+            {
+                "claim_id": "CLM-007",
+                "incident_id": "INC-018",
+                "claimant_name": "Pravin K. Mer",
+                "village_id": "V001",
+                "village_name": "Sasan Gir",
+                "species_responsible": "Leopard",
+                "livestock_type": "goat",
+                "livestock_count": 2,
+                "rate_per_animal_inr": 3500,
+                "preliminary_amount_inr": 7000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.91,
+                "status": "PENDING_REVIEW",
+                "timestamp": (_now - timedelta(days=3)).isoformat(),
+                "notes": "Night raid on shed. Panchanama verified by forest guard.",
+            },
+            {
+                "claim_id": "CLM-008",
+                "incident_id": "INC-024",
+                "claimant_name": "Suresh M. Vala",
+                "village_id": "V001",
+                "village_name": "Sasan Gir",
+                "species_responsible": "Asiatic Lion",
+                "livestock_type": "buffalo",
+                "livestock_count": 1,
+                "rate_per_animal_inr": 25000,
+                "preliminary_amount_inr": 25000,
+                "doc_checklist": [{"document": d, "available": True} for d in all_docs],
+                "docs_complete": True,
+                "missing_docs": [],
+                "confidence": 0.94,
+                "status": "PENDING_REVIEW",
+                "timestamp": (_now - timedelta(days=9)).isoformat(),
+                "notes": "Adult milch buffalo predated near Sasan outer corridor.",
+            },
+        ]
+
 
     # ==================================================================
     # Main pipeline — called on every new sighting
@@ -132,12 +392,22 @@ class Orchestrator:
     # ==================================================================
 
     def submit_compensation_claim(self, claim_data: dict) -> dict:
+        if not claim_data.get("village_name") and claim_data.get("village_id"):
+            v = self._find_village(claim_data["village_id"])
+            if v:
+                claim_data["village_name"] = v["name"]
         claim = self.compensation_agent.process(claim_data, self.pending_approvals)
         self.compensation_claims.append(claim)
         self._log("CompensationAgent",
                   f"Claim {claim['claim_id']} drafted — ₹{claim['preliminary_amount_inr']:,}",
                   claim["confidence"])
         return claim
+
+    def get_claim_by_id(self, claim_id: str):
+        for c in self.compensation_claims:
+            if c.get("claim_id") == claim_id:
+                return c
+        return None
 
     # ==================================================================
     # Human approval
@@ -178,10 +448,13 @@ class Orchestrator:
     # ==================================================================
 
     def update_incident(self, incident_id: str, new_status: str, notes: str = "") -> dict:
+        norm_id = str(incident_id).strip().upper().replace("-", "")
         for inc in self.incidents:
-            if inc["id"] == incident_id:
+            inc_id = str(inc.get("id", "")).strip().upper().replace("-", "")
+            disp_id = str(inc.get("display_id", "")).strip().upper().replace("-", "")
+            if inc.get("id") == incident_id or norm_id == inc_id or norm_id == disp_id:
                 self.response_agent.update_status(inc, new_status, self.response_teams, notes)
-                self._log("ResponseAgent", f"Incident {incident_id} → {new_status}", 1.0)
+                self._log("ResponseAgent", f"Incident {inc.get('id', incident_id)} → {new_status}", 1.0)
                 return inc
         return {}
 
@@ -354,15 +627,15 @@ class Orchestrator:
 
         recent_sightings = sorted(
             self.sightings, key=lambda s: s.get("timestamp", ""), reverse=True
-        )[:6]
+        )[:10]
 
         recent_alerts = sorted(
             self.alerts, key=lambda a: a.get("timestamp", ""), reverse=True
-        )[:5]
+        )[:10]
 
         recent_incidents = sorted(
             self.incidents, key=lambda i: i.get("timestamp", ""), reverse=True
-        )[:6]
+        )[:10]
 
         return {
             "stats": {

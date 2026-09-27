@@ -11,7 +11,7 @@ ALL DATA AND MODELS ARE DEMO / PROTOTYPE ONLY.
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from orchestrator.orchestrator import VanRakshakOrchestrator
@@ -96,6 +96,61 @@ async def root():
 @app.get("/health", tags=["Health"])
 async def health():
     return {"status": "ok", "is_demo": True}
+
+
+# ---------------------------------------------------------------------------
+# In-Memory Demo Officer Authentication (No Database Required)
+# ---------------------------------------------------------------------------
+
+DEMO_OFFICERS = {
+    "admin@1234": {
+        "password": "harshil",
+        "name": "Harshil Patil",
+        "role": "Chief Range Forest Officer & Administrator",
+        "badge": "GJ-FOR-CW-001",
+        "division": "Gir National Park & Sanctuary",
+        "station": "Sasan Gir HQ",
+        "access_level": "LEVEL-5 (FULL COMMAND ACCESS)"
+    }
+}
+
+
+@app.post("/api/officer/login", tags=["Officer Auth"])
+async def officer_login(payload: dict):
+    officer_id = str(payload.get("officer_id") or payload.get("username") or "").strip().lower()
+    password = str(payload.get("password") or "").strip()
+
+    if not officer_id or not password:
+        return {"success": False, "error": "Please provide both Officer ID and Password"}
+
+    officer = DEMO_OFFICERS.get(officer_id)
+    if officer and officer["password"] == password:
+        profile = {k: v for k, v in officer.items() if k != "password"}
+        profile["officer_id"] = officer_id
+        return {
+            "success": True,
+            "data": {
+                "authenticated": True,
+                "officer": profile,
+                "token": f"vr-demo-token-{officer_id}",
+                "message": f"Welcome, {profile['name']} ({profile['role']})"
+            }
+        }
+    raise HTTPException(status_code=401, detail="Invalid Officer ID or Password. Please check demo credentials.")
+
+
+@app.get("/api/officer/verify", tags=["Officer Auth"])
+async def officer_verify():
+    accounts = [
+        {"id": k, "name": v["name"], "role": v["role"], "badge": v["badge"], "division": v["division"]}
+        for k, v in DEMO_OFFICERS.items()
+    ]
+    return {"success": True, "data": {"status": "ready", "accounts": accounts}}
+
+
+@app.post("/api/officer/logout", tags=["Officer Auth"])
+async def officer_logout():
+    return {"success": True, "data": {"authenticated": False, "message": "Signed out"}}
 
 
 # ---------------------------------------------------------------------------

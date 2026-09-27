@@ -127,9 +127,11 @@ class ResponseAgent:
             raise ValueError(f"Invalid status: {new_status}")
 
         incident["status"] = new_status
+        if "lifecycle" not in incident or not isinstance(incident["lifecycle"], list):
+            incident["lifecycle"] = [incident.get("status", "NEW")]
         incident["lifecycle"].append(new_status)
         if notes:
-            incident["notes"] += f" | {notes}"
+            incident["notes"] = (str(incident.get("notes") or "") + f" | {notes}").strip(" | ")
         incident["updated_at"] = datetime.utcnow().isoformat()
 
         if new_status == "ASSIGNED" and incident.get("recommended_team"):

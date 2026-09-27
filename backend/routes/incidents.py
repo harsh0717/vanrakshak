@@ -94,3 +94,40 @@ async def update_incident_status(incident_id: str, body: dict):
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     return result
+
+
+@router.post("/sos")
+async def trigger_sos(body: dict):
+    """
+    POST /api/sos
+    Trigger an urgent citizen distress beacon.
+    """
+    from main import get_orchestrator
+    orch = get_orchestrator()
+
+    lat = float(body.get("lat", 21.1242))
+    lon = float(body.get("lon", 70.5521))
+    contact = body.get("contact", "Citizen SOS")
+    message = body.get("message", "Immediate distress reported by villager")
+
+    sighting_payload = {
+        "species": body.get("species", "Asiatic Lion"),
+        "lat": lat,
+        "lon": lon,
+        "count": 1,
+        "source": "villager_report",
+        "nearest_village_id": body.get("village_id", "VLG001"),
+        "notes": f"URGENT CITIZEN SOS: {message} ({contact})",
+    }
+    workflow_result = orch.process_sighting(sighting_payload)
+
+    return {
+        "status": "SOS_BROADCAST",
+        "message": "Forest Department Rapid Response Team notified. Stay in a safe, enclosed area.",
+        "helplines": {
+            "forest_dept_toll_free": "1926",
+            "ambulance": "108",
+            "sasan_gir_control_room": "02877-285541"
+        },
+        "workflow": workflow_result
+    }

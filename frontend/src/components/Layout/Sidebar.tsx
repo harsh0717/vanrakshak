@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: '🏠' },
+  { path: '/citizen', label: 'Citizen Portal (નાગરિક)', icon: '👥' },
   { path: '/alerts', label: 'Alerts', icon: '⚠️' },
   { path: '/incidents', label: 'Incidents', icon: '📋' },
   { path: '/compensation', label: 'Compensation', icon: '💰' },
@@ -12,6 +13,16 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const [role, setRole] = useState('Forest Officer');
+  const navigate = useNavigate();
+
+  const handleRoleChange = (newRole: string) => {
+    setRole(newRole);
+    if (newRole === 'Villager') {
+      navigate('/citizen');
+    } else {
+      navigate('/');
+    }
+  };
 
   return (
     <aside className="app-sidebar">
@@ -51,11 +62,11 @@ export default function Sidebar() {
         <select
           className="sidebar-role-select"
           value={role}
-          onChange={(e) => setRole(e.target.value)}
+          onChange={(e) => handleRoleChange(e.target.value)}
         >
-          <option>Forest Officer</option>
-          <option>Villager</option>
-          <option>Admin</option>
+          <option value="Forest Officer">Forest Officer (Admin)</option>
+          <option value="Villager">Villager / Citizen (નાગરિક)</option>
+          <option value="Admin">Admin</option>
         </select>
       </div>
 
