@@ -5966,13 +5966,44 @@ function openAllSightingsModal() {
   showTab('incidents');
 }
 
-// Background dynamic auto-sync every 15 seconds
-setInterval(() => {
-  const dashPage = document.getElementById('page-dashboard');
-  if (dashPage && dashPage.classList.contains('active')) {
-    loadDashboard(false);
-  }
-}, 15000);
+// ── CROSS-DEVICE REAL-TIME SYNC ─────────────────────────────────────────────
+// Poll /api/updates/check every 3 s (tiny ~60 byte response).
+// Only trigger heavy UI refreshes when the server timestamp has changed.
+// This gives near-real-time cross-device sync without hammering the server.
+let _syncLastKnown = 0;
+let _syncPaused    = false;   // pause while user is interacting with a modal
+
+async function _crossDeviceSyncTick() {
+  if (_syncPaused) return;
+  try {
+    const res = await fetch('/api/updates/check', { cache: 'no-store' });
+    if (!res.ok) return;
+    const body = await res.json();
+    const serverTs = body?.data?.last_updated ?? 0;
+    if (_syncLastKnown === 0) {
+      // First tick — just record baseline, don't force refresh
+      _syncLastKnown = serverTs;
+      return;
+    }
+    if (serverTs > _syncLastKnown) {
+      _syncLastKnown = serverTs;
+      // Refresh whichever section is currently visible
+      const activePage = document.querySelector('.tab-content.active');
+      const pageId = activePage ? activePage.id : '';
+      if (pageId === 'page-dashboard')   { loadDashboard(false); }
+      if (pageId === 'page-alerts')      { if (typeof loadAlerts      === 'function') loadAlerts(); }
+      if (pageId === 'page-incidents')   { if (typeof loadIncidents   === 'function') loadIncidents(); }
+      if (pageId === 'page-hotspots')    { if (typeof loadHotspots    === 'function') loadHotspots(); }
+      if (pageId === 'page-compensation'){ if (typeof loadClaims      === 'function') loadClaims(); }
+      // Show a subtle "Data updated" toast so user knows sync happened
+      if (typeof showToast === 'function') {
+        showToast('🔄 Live sync — data updated from another device', 'info', 2500);
+      }
+    }
+  } catch (_) { /* network offline — silently skip */ }
+}
+
+setInterval(_crossDeviceSyncTick, 3000);
 
 // ── ALERTS ───────────────────────────────────────────────────
 let _rawAlerts = [];

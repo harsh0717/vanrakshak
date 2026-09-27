@@ -11,6 +11,7 @@ import os
 # Allow imports from project root
 sys.path.insert(0, os.path.dirname(__file__))
 
+import time
 from flask import Flask, jsonify, request, render_template
 from agents.orchestrator import Orchestrator
 from agents.compensation_agent import CompensationAgent
@@ -20,6 +21,15 @@ app.config["JSON_SORT_KEYS"] = False
 
 # Single orchestrator instance (in-memory state)
 orch = Orchestrator()
+
+# Cross-device sync — bumped whenever data changes (sightings, alerts, incidents)
+_last_updated: float = time.time()
+
+
+def _touch():
+    """Bump the global last-updated timestamp so polling clients can detect changes."""
+    global _last_updated
+    _last_updated = time.time()
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +113,18 @@ def api_officer_verify():
 def api_officer_logout():
     """Log out officer session."""
     return _ok({"authenticated": False, "message": "Officer signed out successfully."})
+
+
+# ===========================================================================
+# Cross-Device Sync — Lightweight update check
+# ===========================================================================
+
+@app.route("/api/updates/check")
+def api_updates_check():
+    """Return the last-modified timestamp. Clients poll this every 3 s;
+    if the value has changed since their last check, they trigger a full reload.
+    This avoids hammering heavier endpoints like /api/dashboard constantly."""
+    return _ok({"last_updated": _last_updated})
 
 
 # ===========================================================================
@@ -200,6 +222,7 @@ def api_sightings_post():
         return _err("Invalid coordinate or distance values")
 
     pipeline_result = orch.process_sighting(data)
+    _touch()
     return _ok(pipeline_result), 201
 
 
@@ -223,6 +246,7 @@ def api_incident_update(incident_id):
     updated = orch.update_incident(incident_id, new_status, notes)
     if not updated:
         return _err(f"Incident {incident_id} not found", 404)
+    _touch()
     return _ok(updated)
 
 
@@ -372,6 +396,7 @@ def api_alert_generate():
         orch.incidents.insert(0, new_inc)
 
     orch._log("AlertAgent", f"Generated & Broadcast {sev} alert for {village_name} ({species})", confidence)
+    _touch()
     return _ok(alert), 201
 
 
@@ -425,6 +450,7 @@ def api_approve(action_id):
     result = orch.approve_action(action_id, decision, officer_note)
     if not result["success"]:
         return _err(result["error"], 404)
+    _touch()
     return _ok(result)
 
 
@@ -446,6 +472,7 @@ def api_claim_submit():
         if field not in data:
             return _err(f"Missing required field: {field}")
     claim = orch.submit_compensation_claim(data)
+    _touch()
     return _ok(claim), 201
 
 
@@ -496,6 +523,7 @@ def api_sos():
         "verified": True,
     }
     result = orch.process_sighting(sighting_payload)
+    _touch()
     return _ok({
         "status": "SOS_BROADCAST",
         "message": "Forest Department Rapid Response Team notified. Stay in a safe, enclosed area.",
