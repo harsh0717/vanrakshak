@@ -4508,124 +4508,134 @@ async function updateVillageRadar() {
   if (!sel) return;
   const vid = sel.value;
 
-  // Show loading state
-  const box   = document.getElementById('citizen-radar-box');
-  const badge = document.getElementById('citizen-radar-badge');
+  // UI element refs
+  const box     = document.getElementById('citizen-radar-box');
+  const badge   = document.getElementById('citizen-radar-badge');
   const vnameEl = document.getElementById('citizen-radar-vname');
   const distEl  = document.getElementById('citizen-radar-dist');
-  if (badge) badge.textContent = '⏳ Loading…';
+  const raEl    = document.getElementById('citizen-recent-alerts');
+  const agEl    = document.getElementById('citizen-advisory-grid');
+
+  // Loading indicator
+  if (badge) { badge.className = 'badge-low'; badge.textContent = '⏳ Loading…'; }
+
+  // Helper: parse ISO timestamp safely — append Z to treat as UTC if missing
+  const parseTs = ts => {
+    if (!ts) return 0;
+    const s = String(ts);
+    return new Date(s.endsWith('Z') ? s : s + 'Z').getTime();
+  };
 
   try {
     // Fetch alerts + villages in parallel
     const [alertsRes, villagesRes] = await Promise.all([
-      fetch('/api/alerts', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/alerts',   { cache: 'no-store' }).then(r => r.json()),
       fetch('/api/villages', { cache: 'no-store' }).then(r => r.json()),
     ]);
 
-    const alerts   = (alertsRes?.data  || []).sort((a, b) => new Date(b.timestamp||0) - new Date(a.timestamp||0));
+    // All alerts, sorted newest first
+    const allAlerts = (alertsRes?.data || []).sort(
+      (a, b) => parseTs(b.timestamp) - parseTs(a.timestamp)
+    );
     const villages = villagesRes?.data || [];
 
-    // Get village meta
-    const village = villages.find(v => v.id === vid) || { name: vid, id: vid };
+    // Village metadata from API
+    const village = villages.find(v => v.id === vid) || { name: '—', id: vid, risk_level: 'LOW' };
 
-    // Find most severe recent alert for this village (last 7 days)
-    const sevenDaysAgo = Date.now() - 7 * 86400 * 1000;
-    const villageAlerts = alerts.filter(a =>
-      (a.village_id === vid || (a.village_name || '').toLowerCase().includes((village.name || '').split(' ')[0].toLowerCase())) &&
-      new Date(a.timestamp || 0).getTime() > sevenDaysAgo
-    );
+    // ── THREAT LEVEL for selected village ──────────────────────────────
+    // Look at ALL alerts for this village (no time filter — use all data)
+    const villageAlerts = allAlerts.filter(a => a.village_id === vid);
 
-    // Determine risk level: pick worst severity among village alerts, fall back to village risk_score
     let risk = 'LOW';
     let closestDist = null;
     let topSpecies  = null;
     let topAlertTs  = null;
 
-    const sevOrder = { HIGH: 3, CRITICAL: 3, MEDIUM: 2, LOW: 1 };
+    const sevOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
     for (const a of villageAlerts) {
       const s = (a.severity || 'LOW').toUpperCase();
-      if ((sevOrder[s] || 0) > (sevOrder[risk] || 0)) risk = s === 'CRITICAL' ? 'HIGH' : s;
-      if (closestDist === null || (a.distance_km != null && a.distance_km < closestDist)) {
-        closestDist = a.distance_km;
+      if ((sevOrder[s] || 1) > (sevOrder[risk] || 1)) {
+        risk = s === 'CRITICAL' ? 'HIGH' : s;
+      }
+      const dist = parseFloat(a.distance_km);
+      if (!isNaN(dist) && (closestDist === null || dist < closestDist)) {
+        closestDist = dist;
         topSpecies  = a.species;
         topAlertTs  = a.timestamp;
       }
     }
 
-    // Fallback: use the village's own risk_score from /api/villages
-    if (!villageAlerts.length && village.risk_level) {
-      risk = (village.risk_level || 'LOW').toUpperCase();
+    // Fallback: use risk_level from /api/villages if no alerts found for this village
+    if (!villageAlerts.length) {
+      risk = ((village.risk_level) || 'LOW').toUpperCase();
+      if (risk === 'CRITICAL') risk = 'HIGH';
     }
 
-    // Update radar box colour
+    // ── Update radar box ───────────────────────────────────────────────
     if (box) box.className = `radar-box ${risk} mb-3`;
 
-    // Update badge
-    const badgeLabels = {
-      HIGH:   'HIGH RISK (સાવચેત રહો)',
-      MEDIUM: 'MEDIUM RISK (મધ્યમ જોખમ)',
-      LOW:    'LOW RISK (સામાન્ય)',
-    };
+    const badgeLabels  = { HIGH: 'HIGH RISK (સાવચેત રહો)', MEDIUM: 'MEDIUM RISK (મધ્યમ જોખમ)', LOW: 'LOW RISK (સામાન્ય)' };
     const badgeClasses = { HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low' };
     if (badge) {
-      badge.className = badgeClasses[risk] || 'badge-low';
-      badge.style.fontSize = '13px';
-      badge.style.padding = '4px 12px';
-      badge.textContent = badgeLabels[risk] || 'LOW RISK (સામાન્ય)';
+      badge.className   = badgeClasses[risk] || 'badge-low';
+      badge.style.cssText = 'font-size:13px;padding:4px 12px;';
+      badge.textContent = badgeLabels[risk] || 'LOW RISK';
     }
 
-    // Update village name
-    if (vnameEl) vnameEl.textContent = village.name;
+    if (vnameEl) vnameEl.textContent = village.name || vid;
 
-    // Update status description
     if (distEl) {
       if (risk === 'LOW' || !topSpecies) {
-        distEl.textContent = '✅ No immediate carnivore movement detected near village border.';
+        distEl.innerHTML = '✅ No active wildlife threat recorded near this village.';
       } else {
         const distText = closestDist != null ? `${closestDist.toFixed(1)} km` : 'nearby';
-        const when = topAlertTs ? ` · ${timeAgo(topAlertTs)}` : '';
-        distEl.textContent = `⚠️ ${topSpecies} movement recorded within ${distText} of village perimeter${when}.`;
+        const when     = topAlertTs ? ` · <em>${timeAgo(topAlertTs)}</em>` : '';
+        distEl.innerHTML = `⚠️ <strong>${topSpecies}</strong> movement recorded within <strong>${distText}</strong> of village perimeter${when}.`;
       }
     }
 
-    // Update advisory cards based on risk level
-    const advisoryGrid = document.getElementById('citizen-advisory-grid');
-    if (advisoryGrid) {
-      const cards = (_ADVISORY[risk] || _ADVISORY.LOW).map(c => `
+    // ── Advisory cards — change per threat level ───────────────────────
+    if (agEl) {
+      agEl.innerHTML = (_ADVISORY[risk] || _ADVISORY.LOW).map(c => `
         <div class="advisory-mini-card">
           <div class="advisory-mini-icon">${c.icon}</div>
           <div>
             <div class="advisory-mini-title">${c.title}</div>
             <div class="advisory-mini-desc">${c.desc}</div>
           </div>
-        </div>
-      `).join('');
-      advisoryGrid.innerHTML = cards;
+        </div>`).join('');
     }
 
-    // Update the regional alerts list below — show top 4 alerts for this village
-    const raEl = document.getElementById('citizen-recent-alerts');
+    // ── Latest Regional Warnings — show ALL alerts (all villages, newest first) ──
     if (raEl) {
-      const toShow = villageAlerts.slice(0, 4);
-      if (toShow.length) {
-        raEl.innerHTML = toShow.map(a => `
-          <div style="background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${a.severity==='HIGH'?'var(--high)':a.severity==='MEDIUM'?'var(--medium)':'var(--low)'};">
-            <div style="display:flex;justify-content:space-between;font-size:11px;">
-              <strong>${a.village_name || village.name} · ${a.species || ''}</strong>
-              <span style="color:var(--muted);">${timeAgo(a.timestamp)}</span>
+      if (allAlerts.length) {
+        raEl.innerHTML = allAlerts.slice(0, 8).map(a => {
+          const sev  = (a.severity || 'LOW').toUpperCase();
+          const col  = sev === 'HIGH' ? 'var(--high)' : sev === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
+          const icon = sev === 'HIGH' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🟢';
+          return `
+          <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid ${col};">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;flex-wrap:wrap;gap:4px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span>${icon}</span>
+                <strong>${a.village_name || '—'}</strong>
+                <span style="color:var(--muted);">· ${a.species || ''}</span>
+                <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:1px 6px;">${sev}</span>
+              </div>
+              <span style="color:var(--muted);font-size:10.5px;white-space:nowrap;">${timeAgo(a.timestamp)}</span>
             </div>
-            <div style="font-size:12px;margin-top:2px;">${a.gu_text || a.en_text || ''}</div>
-          </div>
-        `).join('');
+            <div style="font-size:12px;margin-top:5px;color:var(--text-secondary);line-height:1.45;">${a.en_text || ''}</div>
+          </div>`;
+        }).join('');
       } else {
-        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px;">No recent alerts for this village in the last 7 days. ✅</div>`;
+        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:10px;">No regional alerts on record yet.</div>`;
       }
     }
 
-  } catch(err) {
-    // Fallback gracefully if API is unreachable
-    if (badge) badge.textContent = 'RADAR OFFLINE';
-    if (distEl) distEl.textContent = 'Could not fetch live data. Please refresh.';
+  } catch (err) {
+    console.error('Radar fetch error:', err);
+    if (badge) { badge.className = 'badge-low'; badge.textContent = 'RADAR OFFLINE'; }
+    if (distEl) distEl.textContent = 'Could not load live data. Please try refreshing the page.';
   }
 }
 
