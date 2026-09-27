@@ -1,6 +1,6 @@
 # ============================================================
-# VanRakshak AI ΓÇö Flask Application Entry Point
-# Human-Wildlife Conflict Mitigation Platform ΓÇö Gir Forest
+# VanRakshak AI — Flask Application Entry Point
+# Human-Wildlife Conflict Mitigation Platform — Gir Forest
 # PROTOTYPE / DEMO VERSION
 # Run: python app.py
 # ============================================================
@@ -29,7 +29,7 @@ app.config["JSON_SORT_KEYS"] = False
 # Single orchestrator instance (in-memory state)
 orch = Orchestrator()
 
-# Cross-device sync ΓÇö bumped whenever data changes (sightings, alerts, incidents)
+# Cross-device sync — bumped whenever data changes (sightings, alerts, incidents)
 _last_updated: float = time.time()
 
 # ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ def index():
 
 
 # ===========================================================================
-# Officer In-Memory Authentication (Demo / Prototype ΓÇö No Database Required)
+# Officer In-Memory Authentication (Demo / Prototype — No Database Required)
 # ===========================================================================
 
 DEMO_OFFICERS = {
@@ -205,7 +205,7 @@ def api_officer_logout():
 
 
 # ===========================================================================
-# Cross-Device Sync ΓÇö Lightweight update check
+# Cross-Device Sync — Lightweight update check
 # ===========================================================================
 
 @app.route("/api/updates/check")
@@ -503,25 +503,25 @@ def api_alert_generate():
     from agents.alert_agent import _SAFETY_ACTIONS, _FOREST_CONTACT
 
     guj_species = {
-        "Asiatic Lion": "α¬╕α¬┐α¬éα¬╣",
-        "Leopard": "α¬ªα½Çα¬¬α¬íα½ï",
-        "Hyena": "α¬¥α¬░α¬û",
-        "Wild Boar": "α¬£α¬éα¬ùα¬▓α½Ç α¬¡α½éα¬éα¬í",
+        "Asiatic Lion": "સિંહ",
+        "Leopard": "દીપડો",
+        "Hyena": "ઝરખ",
+        "Wild Boar": "જંગલી ભૂંડ",
     }.get(species, species)
 
     if user_msg and str(user_msg).strip():
         en_text = str(user_msg).strip()
     else:
         en_text = (
-            f"{sev} RISK ALERT ΓÇö A {species.lower()} has been sighted near {village_name} "
+            f"{sev} RISK ALERT — A {species.lower()} has been sighted near {village_name} "
             f"({dist:.1f} km away). Keep all livestock secured indoors. Do NOT venture outside after dark. "
             f"Stay in groups. Contact Forest Dept: {_FOREST_CONTACT}."
         )
 
+    risk_guj = "ઉચ્ચ જોખમ" if sev == "HIGH" else "મધ્યમ જોખમ" if sev == "MEDIUM" else "સામાન્ય"
     gu_text = (
-        f"ΓÜá∩╕Å {('α¬ëα¬Üα½ìα¬Ü α¬£α½ïα¬ûα¬«' if sev == 'HIGH' else 'α¬╕α¬╛α¬ºα¬╛α¬░α¬ú' if sev == 'MEDIUM' else 'α¬╕α¬╛α¬«α¬╛α¬¿α½ìα¬»')} α¬Üα½çα¬ñα¬╡α¬úα½Ç: "
-        f"{village_name} α¬¿α¬£α½Çα¬ò {guj_species} α¬¿α½Ç α¬╣α¬┐α¬▓α¬Üα¬╛α¬▓ α¬¿α½ïα¬éα¬ºα¬╛α¬ê α¬¢α½ç ({dist:.1f} α¬òα¬┐α¬«α½Ç). "
-        f"α¬ñα¬«α¬╛α¬░α¬╛ α¬¬α½ìα¬░α¬╛α¬úα½Çα¬ôα¬¿α½ç α¬╕α½üα¬░α¬òα½ìα¬╖α¬┐α¬ñ α¬░α¬╛α¬ûα½ï. α¬░α¬╛α¬ñα½ìα¬░α½ç α¬¼α¬╣α¬╛α¬░ α¬¿ α¬¿α½Çα¬òα¬│α½ï. α¬╡α¬¿ α¬╡α¬┐α¬¡α¬╛α¬ù: {_FOREST_CONTACT}."
+        f"⚠️ {risk_guj} ચેતવણી: {village_name} નજીક {guj_species} ની હિલચાલ નોંધાઈ છે ({dist:.1f} કિમી). "
+        f"તમારા પશુધનને સુરક્ષિત બંધ વાડામાં રાખો. રાત્રે બહાર ન નીકળો. વન વિભાગ હેલ્પલાઇન: {_FOREST_CONTACT}."
     )
 
     alert = {
@@ -538,7 +538,7 @@ def api_alert_generate():
         "gu_text": gu_text,
         "safety_actions": _SAFETY_ACTIONS.get(sev, _SAFETY_ACTIONS["LOW"]),
         "timestamp": datetime.utcnow().isoformat(),
-        "nlg_note": "IBM Granite LLM ΓÇö Natural Language Generation (Proposed Integration ΓÇö Simulated in Prototype)",
+        "nlg_note": "IBM Granite LLM — Natural Language Generation (Proposed Integration — Simulated in Prototype)",
         "agent_meta": {
             "agent": "AlertAgent",
             "version": "1.0-DYNAMIC",
@@ -774,7 +774,7 @@ def api_audit_log():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  VanRakshak AI ΓÇö Human-Wildlife Conflict Mitigation")
+    print("  VanRakshak AI — Human-Wildlife Conflict Mitigation")
     print("  Gir Forest Prototype | DEMO MODE")
     print("  Open: http://localhost:5000")
     print("=" * 60)

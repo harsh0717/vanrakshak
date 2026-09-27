@@ -4957,6 +4957,17 @@ const _ADVISORY = {
   ],
 };
 
+function formatCleanGujarati(guText, villageName, species, severity) {
+  if (!guText || typeof guText !== 'string' || guText.includes('α') || guText.includes('Γ') || guText.includes('') || guText.includes('\\u03b1') || guText.includes('\\u0393') || guText.includes('?')) {
+    const spGu = (typeof GUJARATI_SPECIES_MAP !== 'undefined' && GUJARATI_SPECIES_MAP[species]) || species || 'વન્યજીવ';
+    const sevUpper = (severity || 'LOW').toUpperCase();
+    const riskGu = sevUpper === 'HIGH' || sevUpper === 'CRITICAL' ? 'ઉચ્ચ જોખમ' : sevUpper === 'MEDIUM' ? 'મધ્યમ જોખમ' : 'સામાન્ય જોખમ';
+    const v = villageName || 'વિસ્તાર';
+    return `⚠️ ${riskGu} ચેતવણી: ${v} નજીકના વિસ્તારમાં ${spGu} ની હિલચાલ નોંધાઈ છે. પશુધનને સુરક્ષિત બંધ વાડામાં રાખો અને સાવચેત રહો. વન વિભાગ હેલ્પલાઇન: 1926.`;
+  }
+  return guText;
+}
+
 async function updateVillageRadar() {
   const sel = document.getElementById('citizen-radar-village');
   if (!sel) return;
@@ -5032,21 +5043,8 @@ async function updateVillageRadar() {
       };
     });
 
-    // Update <select> options with live threat status
-    if (sel && sel.options.length) {
-      const currentSelectedVal = sel.value;
-      villages.forEach(v => {
-        let opt = sel.querySelector(`option[value="${v.id}"]`);
-        const threat = villageThreatMap[v.id] || { risk: 'LOW' };
-        const icon = threat.risk === 'HIGH' ? '🔴' : threat.risk === 'MEDIUM' ? '🟡' : '🟢';
-        const distStr = threat.dist != null ? ` [${threat.dist.toFixed(1)} km]` : '';
-        const optLabel = `${icon} ${v.name} — ${threat.risk} RISK${distStr}`;
-        if (opt) {
-          opt.textContent = optLabel;
-        }
-      });
-      sel.value = currentSelectedVal;
-    }
+    // Note: Do NOT mutate sel.options or opt.textContent every second!
+    // Mutating select options every second causes the dropdown to reload and close while the user is selecting.
 
     // ── 2. SELECTED VILLAGE THREAT LEVEL ─────────────────────────────
     const village = villages.find(v => v.id === vid) || { name: '—', id: vid, risk_level: 'LOW' };
@@ -5172,7 +5170,7 @@ async function updateVillageRadar() {
               </div>
             </div>
             <div style="font-size:12.5px;color:var(--text);line-height:1.5;">${a.en_text || a.message || ''}</div>
-            ${a.gu_text ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;font-style:italic;line-height:1.45;">${a.gu_text}</div>` : ''}
+            ${a.gu_text ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;font-style:italic;line-height:1.45;">${formatCleanGujarati(a.gu_text, a.village_name, a.species, a.severity)}</div>` : ''}
           </div>`;
         }).join('');
       } else {
@@ -6927,7 +6925,7 @@ function renderAlertCardsDOM(alerts) {
             <div style="font-size:10px;text-transform:uppercase;font-weight:700;color:var(--medium);margin-bottom:2px;letter-spacing:0.04em;">
               <i class="bi bi-translate me-1"></i>ગુજરાતી ચેતવણી સંદેશ:
             </div>
-            <div>${a.gu_text}</div>
+            <div>${formatCleanGujarati(a.gu_text, a.village_name, a.species, a.severity)}</div>
           </div>
         ` : ''}
 
