@@ -502,27 +502,12 @@ def api_alert_generate():
 
     from agents.alert_agent import _SAFETY_ACTIONS, _FOREST_CONTACT
 
-    guj_species = {
-        "Asiatic Lion": "સિંહ",
-        "Leopard": "દીપડો",
-        "Hyena": "ઝરખ",
-        "Wild Boar": "જંગલી ભૂંડ",
-    }.get(species, species)
-
     if user_msg and str(user_msg).strip():
         en_text = str(user_msg).strip()
     else:
-        en_text = (
-            f"{sev} RISK ALERT — A {species.lower()} has been sighted near {village_name} "
-            f"({dist:.1f} km away). Keep all livestock secured indoors. Do NOT venture outside after dark. "
-            f"Stay in groups. Contact Forest Dept: {_FOREST_CONTACT}."
-        )
+        en_text = orch.alert_agent._render_en(sev, species, village_name, dist)
 
-    risk_guj = "ઉચ્ચ જોખમ" if sev == "HIGH" else "મધ્યમ જોખમ" if sev == "MEDIUM" else "સામાન્ય"
-    gu_text = (
-        f"⚠️ {risk_guj} ચેતવણી: {village_name} નજીક {guj_species} ની હિલચાલ નોંધાઈ છે ({dist:.1f} કિમી). "
-        f"તમારા પશુધનને સુરક્ષિત બંધ વાડામાં રાખો. રાત્રે બહાર ન નીકળો. વન વિભાગ હેલ્પલાઇન: {_FOREST_CONTACT}."
-    )
+    gu_text = orch.alert_agent._render_gu(sev, species, village_name)
 
     alert = {
         "alert_id": f"ALT-{uuid.uuid4().hex[:6].upper()}",
