@@ -250,13 +250,97 @@ def api_villages():
     result = []
     for v in orch.villages:
         r = risk_map.get(v["id"], {})
+        # Prioritize officer-updated risk_level on village object
+        risk_level = v.get("risk_level") or r.get("risk_level", "LOW")
+        risk_score = v.get("risk_score") if v.get("risk_score") is not None else r.get("risk_score", 0.25)
         result.append({
             **v,
-            "risk_score": r.get("risk_score", 0.0),
-            "risk_level": r.get("risk_level", "LOW"),
-            "confidence": r.get("confidence", 0.70),
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "confidence": r.get("confidence", 0.95),
         })
     return _ok(result)
+
+
+@app.route("/api/villages/<village_id>/threat", methods=["POST", "PUT"])
+def api_village_set_threat(village_id):
+    """Allow Officer to directly set or override a village's current threat level."""
+    import uuid
+    from datetime import datetime
+    data = request.get_json(silent=True) or {}
+    new_risk = str(data.get("risk_level") or data.get("severity") or "LOW").strip().upper()
+    if new_risk not in ("HIGH", "MEDIUM", "LOW", "CRITICAL"):
+        return _err("Invalid risk level. Must be HIGH, MEDIUM, LOW, or CRITICAL", 400)
+
+    normalized_risk = "HIGH" if new_risk == "CRITICAL" else new_risk
+
+    v = next((x for x in orch.villages if x["id"] == village_id), None)
+    if not v:
+        v = next((x for x in orch.villages if x["name"].strip().lower() == str(village_id).strip().lower()), None)
+    if not v:
+        return _err(f"Village {village_id} not found", 404)
+
+    # 1. Update village object with officer setting
+    v["risk_level"] = normalized_risk
+    risk_score = 0.88 if normalized_risk == "HIGH" else 0.58 if normalized_risk == "MEDIUM" else 0.22
+    v["risk_score"] = risk_score
+
+    # 2. Update orch.risk_assessments
+    existing_r = next((r for r in orch.risk_assessments if r["village_id"] == v["id"]), None)
+    if existing_r:
+        existing_r["risk_level"] = normalized_risk
+        existing_r["risk_score"] = risk_score
+        existing_r["timestamp"] = datetime.utcnow().isoformat()
+    else:
+        orch.risk_assessments.append({
+            "village_id": v["id"],
+            "risk_score": risk_score,
+            "risk_level": normalized_risk,
+            "confidence": 0.95,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    # 3. Create broadcast alert for this officer setting
+    species = data.get("species") or ("Asiatic Lion" if normalized_risk == "HIGH" else "Leopard" if normalized_risk == "MEDIUM" else "Wildlife Presence")
+    dist = float(data.get("distance_km") or (0.6 if normalized_risk == "HIGH" else 1.5 if normalized_risk == "MEDIUM" else 6.0))
+    message = data.get("message") or f"Officer directive: Threat level updated to {normalized_risk} for {v['name']} sector."
+
+    new_alert = {
+        "alert_id": f"ALT-OFF-{uuid.uuid4().hex[:6].upper()}",
+        "severity": normalized_risk,
+        "village_id": v["id"],
+        "village_name": v["name"],
+        "species": species,
+        "risk_score": risk_score,
+        "confidence": 0.95,
+        "distance_km": dist,
+        "broadcast": True,
+        "en_text": f"OFFICER DIRECTIVE — Threat level for {v['name']} set to {normalized_risk}. {message}",
+        "gu_text": f"અધિકારી આદેશ: {v['name']} વિસ્તાર માટે હાલનું જોખમ સ્તર {normalized_risk} નક્કી કરાયું છે.",
+        "timestamp": datetime.utcnow().isoformat(),
+        "nlg_note": "Field Officer Command Override",
+    }
+    orch.alerts.insert(0, new_alert)
+
+    orch._log("OfficerOverride", f"Officer updated {v['name']} ({v['id']}) threat level to {normalized_risk}", 0.98)
+
+    # 4. Trigger instant live push (WebSocket + SSE + timestamp bump)
+    _touch("VILLAGE_THREAT_UPDATED", {
+        "village_id": v["id"],
+        "village_name": v["name"],
+        "risk_level": normalized_risk,
+        "risk_score": risk_score,
+        "species": species,
+        "distance_km": dist
+    })
+
+    return _ok({
+        "village_id": v["id"],
+        "village_name": v["name"],
+        "risk_level": normalized_risk,
+        "risk_score": risk_score,
+        "message": f"Threat level for {v['name']} updated to {normalized_risk}"
+    })
 
 
 # ===========================================================================
@@ -499,8 +583,32 @@ def api_alert_generate():
         }
         orch.incidents.insert(0, new_inc)
 
+    # Update village's threat level to match the generated alert
+    village["risk_level"] = sev
+    village["risk_score"] = alert["risk_score"]
+    existing_r = next((r for r in orch.risk_assessments if r["village_id"] == village["id"]), None)
+    if existing_r:
+        existing_r["risk_level"] = sev
+        existing_r["risk_score"] = alert["risk_score"]
+        existing_r["timestamp"] = datetime.utcnow().isoformat()
+    else:
+        orch.risk_assessments.append({
+            "village_id": village["id"],
+            "risk_score": alert["risk_score"],
+            "risk_level": sev,
+            "confidence": confidence,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
     orch._log("AlertAgent", f"Generated & Broadcast {sev} alert for {village_name} ({species})", confidence)
-    _touch()
+    _touch("ALERT_BROADCAST", {
+        "alert_id": alert["alert_id"],
+        "village_id": village["id"],
+        "village_name": village_name,
+        "species": species,
+        "severity": sev,
+        "distance_km": dist
+    })
     return _ok(alert), 201
 
 

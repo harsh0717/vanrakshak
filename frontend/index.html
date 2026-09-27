@@ -3608,7 +3608,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
             <div style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;font-weight:700;">CURRENT THREAT LEVEL / હાલનું જોખમ</div>
             <div id="radar-live-indicator" style="font-size:11px;color:#10b981;font-weight:700;display:flex;align-items:center;gap:6px;">
-              <span class="live-dot-pulse"></span> <span id="radar-live-text">● LIVE WEBSOCKET &amp; 5s AUTO-SYNC</span>
+              <span class="live-dot-pulse"></span> <span id="radar-live-text">● LIVE (1s AUTO-SYNC &amp; WEBSOCKET)</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
@@ -4576,23 +4576,20 @@ async function updateVillageRadar() {
         return false;
       });
 
+      // The village's base threat level IS EXACTLY WHAT THE OFFICER SET!
       let vRisk = (v.risk_level || 'LOW').toUpperCase();
+      if (vRisk === 'CRITICAL') vRisk = 'HIGH';
+      let vRiskScore = v.risk_score !== undefined ? v.risk_score : (vRisk === 'HIGH' ? 0.88 : vRisk === 'MEDIUM' ? 0.58 : 0.22);
       let vDist = null;
       let vSpecies = null;
       let vTopTs = null;
-      let vRiskScore = v.risk_score || (vRisk === 'HIGH' ? 0.85 : vRisk === 'MEDIUM' ? 0.55 : 0.25);
 
       for (const a of vAlerts) {
-        const s = (a.severity || 'LOW').toUpperCase();
-        if ((sevOrder[s] || 1) > (sevOrder[vRisk] || 1)) {
-          vRisk = s === 'CRITICAL' ? 'HIGH' : s;
-        }
         const d = parseFloat(a.distance_km);
         if (!isNaN(d) && (vDist === null || d < vDist)) {
           vDist = d;
           vSpecies = a.species;
           vTopTs = a.timestamp;
-          if (a.risk_score) vRiskScore = a.risk_score;
         }
       }
       villageThreatMap[v.id] = {
@@ -4641,27 +4638,28 @@ async function updateVillageRadar() {
     // Update village name
     if (vnameEl) vnameEl.textContent = village.name || vid;
 
-    // Update risk score
+    // Update risk score (reflects officer setting)
     if (scoreEl) {
-      const scorePct = Math.round((threat.score || 0.5) * 100);
-      scoreEl.textContent = `RISK: ${scorePct}%`;
+      const scorePct = Math.round((threat.score || (risk === 'HIGH' ? 0.88 : risk === 'MEDIUM' ? 0.58 : 0.22)) * 100);
+      scoreEl.textContent = `OFFICER LEVEL: ${risk} (${scorePct}%)`;
       scoreEl.style.color = risk === 'HIGH' ? 'var(--high)' : risk === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
     }
 
     // Update distance & species description
     if (distEl) {
-      if (risk === 'LOW' || !threat.species) {
-        distEl.innerHTML = '✅ No active wildlife threat recorded near this village perimeter.';
+      if (risk === 'LOW') {
+        distEl.innerHTML = '✅ <strong>Officer Status: LOW RISK (Normal)</strong>. Perimeter safe. Standard forest-edge guidelines apply.';
       } else {
-        const distText = threat.dist != null ? `${threat.dist.toFixed(1)} km` : 'nearby';
+        const distText = threat.dist != null ? `${threat.dist.toFixed(1)} km` : '0.6 km';
         const when = threat.topTs ? ` · <em>${timeAgo(threat.topTs)}</em>` : '';
-        distEl.innerHTML = `⚠️ <strong>${threat.species}</strong> movement recorded within <strong>${distText}</strong> of village perimeter${when}.`;
+        const sp = threat.species || (risk === 'HIGH' ? 'Asiatic Lion' : 'Leopard');
+        distEl.innerHTML = `⚠️ <strong>OFFICER STATUS: ${risk} THREAT LEVEL ACTIVE</strong> — <strong>${sp}</strong> movement monitored within <strong>${distText}</strong> of village perimeter${when}.`;
       }
     }
 
     // Update last sync time
     if (syncEl) {
-      syncEl.innerHTML = `<i class="bi bi-clock me-1"></i>Last evaluated: ${new Date().toLocaleTimeString()} (Auto-refresh: 5s)`;
+      syncEl.innerHTML = `<i class="bi bi-clock me-1"></i>Last evaluated: ${new Date().toLocaleTimeString()} (Live 1s Auto-Sync)`;
     }
 
     // ── 3. ADVISORY CARDS PER THREAT LEVEL ───────────────────────────
@@ -5630,7 +5628,13 @@ function renderVillageTable() {
         ${v.name}
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">(${v.id})</span>
       </td>
-      <td>${riskBadge(v.risk_level)}</td>
+      <td onclick="event.stopPropagation()">
+        <select class="form-select-dark" onchange="setVillageThreatLevel('${v.id}', this.value)" style="font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;font-weight:700;color:${v.risk_level==='HIGH'?'var(--high)':v.risk_level==='MEDIUM'?'var(--medium)':'var(--low)'};background:var(--surface);">
+          <option value="HIGH" ${v.risk_level==='HIGH'?'selected':''}>🔴 HIGH</option>
+          <option value="MEDIUM" ${v.risk_level==='MEDIUM'?'selected':''}>🟡 MEDIUM</option>
+          <option value="LOW" ${v.risk_level==='LOW'?'selected':''}>🟢 LOW</option>
+        </select>
+      </td>
       <td>
         ${riskBar(v.risk_score||0, v.risk_level)}
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">${((v.risk_score||0)*100).toFixed(0)}%</span>
@@ -5790,6 +5794,29 @@ function renderAlertsSummary() {
     </div>`).join('');
 }
 
+// ── OFFICER SET VILLAGE THREAT LEVEL ────────────────────────
+async function setVillageThreatLevel(vid, newRisk) {
+  try {
+    const res = await api(`/api/villages/${vid}/threat`, 'POST', { risk_level: newRisk });
+    if (res && res.success) {
+      if (typeof showToast === 'function') {
+        showToast(`✓ Threat level for ${res.data.village_name || vid} set to ${newRisk}! Syncing to citizens…`, 'success', 3000);
+      }
+      if (typeof loadDashboard === 'function') loadDashboard(false);
+      if (typeof updateVillageRadar === 'function') updateVillageRadar();
+      const modal = document.getElementById('villageDetailModal');
+      if (modal && modal.classList.contains('show')) {
+        inspectVillage(vid);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to set threat level:', err);
+    if (typeof showToast === 'function') {
+      showToast('Error updating threat level', 'error', 3000);
+    }
+  }
+}
+
 // ── INSPECT VILLAGE MODAL ──
 function inspectVillage(vid) {
   if (!_dashData || !_dashData.villages) return;
@@ -5835,7 +5862,7 @@ function inspectVillage(vid) {
       </div>
     </div>
 
-    <div>
+    <div style="margin-bottom:12px;">
       <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">
         Historical & Active Conflict Cases (${incidents.length})
       </div>
@@ -5845,6 +5872,28 @@ function inspectVillage(vid) {
             <span><code style="color:var(--blue);">${i.id}</code> ${i.species}</span>
             <span>${statusBadge(i.status)}</span>
           </div>`).join('') : '<div style="color:var(--muted);font-size:11.5px;padding:6px;">No recorded conflict incidents.</div>'}
+      </div>
+    </div>
+
+    <!-- Officer Live Threat Level Command Controls -->
+    <div style="background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.25);border-radius:var(--radius-sm);padding:12px;margin-top:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span><i class="bi bi-shield-fill-exclamation text-danger me-1"></i>Officer Threat Level Control</span>
+        <span style="font-size:10.5px;color:var(--primary);font-weight:700;">● LIVE 1s CITIZEN SYNC</span>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">
+        Click below to immediately update the CURRENT THREAT LEVEL for ${v.name}. Citizens will see the updated warning within 1 second.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <button type="button" class="btn-red" style="padding:7px;font-size:12px;font-weight:700;${v.risk_level==='HIGH'?'box-shadow:0 0 10px rgba(244,63,94,0.6);border:2px solid #fff;':''}" onclick="setVillageThreatLevel('${v.id}', 'HIGH')">
+          🔴 SET HIGH
+        </button>
+        <button type="button" class="btn-amber" style="padding:7px;font-size:12px;font-weight:700;${v.risk_level==='MEDIUM'?'box-shadow:0 0 10px rgba(245,158,11,0.6);border:2px solid #fff;':''}" onclick="setVillageThreatLevel('${v.id}', 'MEDIUM')">
+          🟡 SET MEDIUM
+        </button>
+        <button type="button" class="btn-green" style="padding:7px;font-size:12px;font-weight:700;${v.risk_level==='LOW'?'box-shadow:0 0 10px rgba(16,185,129,0.6);border:2px solid #fff;':''}" onclick="setVillageThreatLevel('${v.id}', 'LOW')">
+          🟢 SET LOW
+        </button>
       </div>
     </div>
   `;
@@ -6218,17 +6267,17 @@ async function _crossDeviceSyncTick() {
   } catch (_) { /* network offline — silently skip */ }
 }
 
-setInterval(_crossDeviceSyncTick, 3000);
+setInterval(_crossDeviceSyncTick, 1000);
 
-// ── 5-SECOND PERIODIC API RECALL ───────────────────────────────────────────
-// Automatically recalls the API every 5 seconds to guarantee the citizen
-// threat level and regional warnings are always dynamic and fresh.
+// ── 1-SECOND PERIODIC API RECALL ───────────────────────────────────────────
+// Automatically recalls the API every 1 second so citizen threat level
+// immediately updates to what the officer set.
 setInterval(() => {
   const citizenPage = document.getElementById('page-citizen');
   if (citizenPage && citizenPage.classList.contains('active')) {
     updateVillageRadar();
   }
-}, 5000);
+}, 1000);
 
 // ── LIVE WEBSOCKET (websocat & browser compatible) ─────────────────────────
 let _vanrakshakWS = null;
