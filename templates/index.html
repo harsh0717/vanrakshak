@@ -3610,7 +3610,7 @@
       <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-top:16px;">
         Immediate Safety Precautions / તુરંત સાવચેતીના પગલાં:
       </div>
-      <div class="advisory-card-grid">
+      <div id="citizen-advisory-grid" class="advisory-card-grid">
         <div class="advisory-mini-card">
           <div class="advisory-mini-icon">🏡</div>
           <div>
@@ -4480,39 +4480,152 @@ function switchCitizenView(view) {
 }
 
 async function loadCitizenPortal() {
-  updateVillageRadar();
-  loadCitizenRegionalAlerts();
+  updateVillageRadar();   // fetches live data and populates radar + regional alerts
   switchCitizenView(_activeCitizenView || 'radar');
 }
 
-function updateVillageRadar() {
+// Advisory actions per threat level
+const _ADVISORY = {
+  HIGH: [
+    { icon: '🚨', title: 'Stay Indoors After Dusk', desc: 'Do NOT leave home after sunset. Predator is active near the village.' },
+    { icon: '🏡', title: 'Lock All Livestock Now', desc: 'Immediately secure cattle, goats, and sheep in locked pens (વાડો / નેસડા).' },
+    { icon: '📞', title: 'Call 1926 Immediately', desc: 'Forest Rapid Response Team is on alert. Report any movement instantly.' },
+  ],
+  MEDIUM: [
+    { icon: '🏡', title: 'Secure Livestock by Dusk', desc: 'Lock cattle and goats in covered pens (વાડો / નેસડા) before dusk.' },
+    { icon: '🔦', title: 'Carry Lights at Night', desc: 'Avoid solitary walking after dark. Always carry a torch and bamboo stick (લાઠી).' },
+    { icon: '📞', title: 'Dial 1926 for Patrol', desc: 'Do not provoke animals. Call toll-free 1926 for forest patrol.' },
+  ],
+  LOW: [
+    { icon: '✅', title: 'Routine Precautions', desc: 'No immediate threat. Follow standard safety guidelines near forest areas.' },
+    { icon: '🔦', title: 'Stay Alert at Night', desc: 'Carry a torch when walking near jungle edges after sunset.' },
+    { icon: '📞', title: 'Report Any Sighting', desc: 'If you spot any wildlife, report it to the nearest Forest Guard or call 1926.' },
+  ],
+};
+
+async function updateVillageRadar() {
   const sel = document.getElementById('citizen-radar-village');
   if (!sel) return;
   const vid = sel.value;
-  const vnames = {
-    'V001': { en: 'Sasan Gir', gu: 'સાસણ ગીર', risk: 'HIGH', dist: '0.8 km', animal: 'Asiatic Lion (સિંહ)' },
-    'V002': { en: 'Dhari', gu: 'ધારી', risk: 'MEDIUM', dist: '2.4 km', animal: 'Leopard (દીપડો)' },
-    'V003': { en: 'Talala', gu: 'તાળાળા', risk: 'HIGH', dist: '1.1 km', animal: 'Asiatic Lion (સિંહ)' },
-    'V004': { en: 'Visavadar', gu: 'વિસાવદર', risk: 'MEDIUM', dist: '3.1 km', animal: 'Wild Boar (જંગલી ભૂંડ)' },
-    'V005': { en: 'Una', gu: 'ઉના', risk: 'LOW', dist: '6.5 km', animal: 'Nilgai (નીલગાય)' },
-    'V006': { en: 'Mendarda', gu: 'મેંદરડા', risk: 'LOW', dist: '5.2 km', animal: 'Hyena (લકડબઘ્ઘો)' },
-    'V007': { en: 'Junagadh', gu: 'જૂનાગઢ', risk: 'LOW', dist: '8.0 km', animal: 'None reported' },
-  };
-  const v = vnames[vid] || vnames['V001'];
-  const box = document.getElementById('citizen-radar-box');
-  if (box) box.className = 'radar-box ' + v.risk;
+
+  // Show loading state
+  const box   = document.getElementById('citizen-radar-box');
   const badge = document.getElementById('citizen-radar-badge');
-  if (badge) {
-    badge.className = v.risk === 'HIGH' ? 'badge-high' : v.risk === 'MEDIUM' ? 'badge-medium' : 'badge-low';
-    badge.textContent = v.risk === 'HIGH' ? 'HIGH RISK (સાવચેત રહો)' : v.risk === 'MEDIUM' ? 'MEDIUM RISK (મધ્યમ જોખમ)' : 'LOW RISK (સામાન્ય)';
-  }
   const vnameEl = document.getElementById('citizen-radar-vname');
-  if (vnameEl) vnameEl.textContent = v.en + ' (' + v.gu + ')';
-  const distEl = document.getElementById('citizen-radar-dist');
-  if (distEl) {
-    distEl.textContent = v.risk === 'LOW' 
-      ? '✅ No immediate carnivore movement detected near village border.' 
-      : '⚠️ ' + v.animal + ' movement recorded within ' + v.dist + ' of village perimeter.';
+  const distEl  = document.getElementById('citizen-radar-dist');
+  if (badge) badge.textContent = '⏳ Loading…';
+
+  try {
+    // Fetch alerts + villages in parallel
+    const [alertsRes, villagesRes] = await Promise.all([
+      fetch('/api/alerts', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/villages', { cache: 'no-store' }).then(r => r.json()),
+    ]);
+
+    const alerts   = (alertsRes?.data  || []).sort((a, b) => new Date(b.timestamp||0) - new Date(a.timestamp||0));
+    const villages = villagesRes?.data || [];
+
+    // Get village meta
+    const village = villages.find(v => v.id === vid) || { name: vid, id: vid };
+
+    // Find most severe recent alert for this village (last 7 days)
+    const sevenDaysAgo = Date.now() - 7 * 86400 * 1000;
+    const villageAlerts = alerts.filter(a =>
+      (a.village_id === vid || (a.village_name || '').toLowerCase().includes((village.name || '').split(' ')[0].toLowerCase())) &&
+      new Date(a.timestamp || 0).getTime() > sevenDaysAgo
+    );
+
+    // Determine risk level: pick worst severity among village alerts, fall back to village risk_score
+    let risk = 'LOW';
+    let closestDist = null;
+    let topSpecies  = null;
+    let topAlertTs  = null;
+
+    const sevOrder = { HIGH: 3, CRITICAL: 3, MEDIUM: 2, LOW: 1 };
+    for (const a of villageAlerts) {
+      const s = (a.severity || 'LOW').toUpperCase();
+      if ((sevOrder[s] || 0) > (sevOrder[risk] || 0)) risk = s === 'CRITICAL' ? 'HIGH' : s;
+      if (closestDist === null || (a.distance_km != null && a.distance_km < closestDist)) {
+        closestDist = a.distance_km;
+        topSpecies  = a.species;
+        topAlertTs  = a.timestamp;
+      }
+    }
+
+    // Fallback: use the village's own risk_score from /api/villages
+    if (!villageAlerts.length && village.risk_level) {
+      risk = (village.risk_level || 'LOW').toUpperCase();
+    }
+
+    // Update radar box colour
+    if (box) box.className = `radar-box ${risk} mb-3`;
+
+    // Update badge
+    const badgeLabels = {
+      HIGH:   'HIGH RISK (સાવચેત રહો)',
+      MEDIUM: 'MEDIUM RISK (મધ્યમ જોખમ)',
+      LOW:    'LOW RISK (સામાન્ય)',
+    };
+    const badgeClasses = { HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low' };
+    if (badge) {
+      badge.className = badgeClasses[risk] || 'badge-low';
+      badge.style.fontSize = '13px';
+      badge.style.padding = '4px 12px';
+      badge.textContent = badgeLabels[risk] || 'LOW RISK (સામાન્ય)';
+    }
+
+    // Update village name
+    if (vnameEl) vnameEl.textContent = village.name;
+
+    // Update status description
+    if (distEl) {
+      if (risk === 'LOW' || !topSpecies) {
+        distEl.textContent = '✅ No immediate carnivore movement detected near village border.';
+      } else {
+        const distText = closestDist != null ? `${closestDist.toFixed(1)} km` : 'nearby';
+        const when = topAlertTs ? ` · ${timeAgo(topAlertTs)}` : '';
+        distEl.textContent = `⚠️ ${topSpecies} movement recorded within ${distText} of village perimeter${when}.`;
+      }
+    }
+
+    // Update advisory cards based on risk level
+    const advisoryGrid = document.getElementById('citizen-advisory-grid');
+    if (advisoryGrid) {
+      const cards = (_ADVISORY[risk] || _ADVISORY.LOW).map(c => `
+        <div class="advisory-mini-card">
+          <div class="advisory-mini-icon">${c.icon}</div>
+          <div>
+            <div class="advisory-mini-title">${c.title}</div>
+            <div class="advisory-mini-desc">${c.desc}</div>
+          </div>
+        </div>
+      `).join('');
+      advisoryGrid.innerHTML = cards;
+    }
+
+    // Update the regional alerts list below — show top 4 alerts for this village
+    const raEl = document.getElementById('citizen-recent-alerts');
+    if (raEl) {
+      const toShow = villageAlerts.slice(0, 4);
+      if (toShow.length) {
+        raEl.innerHTML = toShow.map(a => `
+          <div style="background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${a.severity==='HIGH'?'var(--high)':a.severity==='MEDIUM'?'var(--medium)':'var(--low)'};">
+            <div style="display:flex;justify-content:space-between;font-size:11px;">
+              <strong>${a.village_name || village.name} · ${a.species || ''}</strong>
+              <span style="color:var(--muted);">${timeAgo(a.timestamp)}</span>
+            </div>
+            <div style="font-size:12px;margin-top:2px;">${a.gu_text || a.en_text || ''}</div>
+          </div>
+        `).join('');
+      } else {
+        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:8px;">No recent alerts for this village in the last 7 days. ✅</div>`;
+      }
+    }
+
+  } catch(err) {
+    // Fallback gracefully if API is unreachable
+    if (badge) badge.textContent = 'RADAR OFFLINE';
+    if (distEl) distEl.textContent = 'Could not fetch live data. Please refresh.';
   }
 }
 
@@ -6002,6 +6115,13 @@ async function _crossDeviceSyncTick() {
       if (pageId === 'page-incidents')   { if (typeof loadIncidents   === 'function') loadIncidents(); }
       if (pageId === 'page-hotspots')    { if (typeof loadHotspots    === 'function') loadHotspots(); }
       if (pageId === 'page-compensation'){ if (typeof loadClaims      === 'function') loadClaims(); }
+      // Citizen Safety Radar — refresh threat level in real time
+      if (pageId === 'page-citizen') {
+        const radarView = document.getElementById('view-citizen-radar');
+        if (radarView && radarView.style.display !== 'none') {
+          updateVillageRadar();
+        }
+      }
       // Show a subtle "Data updated" toast so user knows sync happened
       if (typeof showToast === 'function') {
         showToast('🔄 Live sync — data updated from another device', 'info', 2500);
