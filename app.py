@@ -15,7 +15,10 @@ import time
 import json
 import asyncio
 import threading
-import websockets
+try:
+    import websockets
+except ImportError:
+    websockets = None
 from flask import Flask, jsonify, request, render_template, Response
 from agents.orchestrator import Orchestrator
 from agents.compensation_agent import CompensationAgent
@@ -64,17 +67,20 @@ async def _ws_main():
     _ws_loop = asyncio.get_running_loop()
     try:
         async with websockets.serve(_ws_handler, "0.0.0.0", 8765):
-            print("  ≡ƒôí WebSocket stream active on ws://0.0.0.0:8765 (websocat ready)")
+            print("  [WebSocket] Stream active on ws://0.0.0.0:8765 (websocat ready)")
             await asyncio.Future()
     except Exception as e:
-        print(f"  ΓÜá∩╕Å WebSocket server notice: {e}")
+        print(f"  [WebSocket] Server notice: {e}")
 
 def _start_ws_server():
+    if not websockets:
+        print("  [WebSocket] Library not installed; running in standard HTTP/SSE streaming mode.")
+        return
     def _run():
         try:
             asyncio.run(_ws_main())
         except Exception as e:
-            print(f"  ΓÜá∩╕Å WS thread exited: {e}")
+            print(f"  [WebSocket] Thread exited: {e}")
     t = threading.Thread(target=_run, daemon=True, name="VanRakshak-WS")
     t.start()
 
