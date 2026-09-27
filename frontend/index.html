@@ -997,6 +997,7 @@
   @media(max-width:991px){
     .g4 { grid-template-columns: 1fr 1fr; }
     .g3 { grid-template-columns: 1fr 1fr; }
+    .g2 { grid-template-columns: 1fr; }
   }
   @media(max-width:576px){
     .g4 { grid-template-columns: 1fr 1fr; gap: 0.65rem; }
@@ -2407,6 +2408,424 @@
       padding: 12px;
     }
   }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     VANRAKSHAK MASTER RESPONSIVE SYSTEM (Mobile, Tablet, Desktop)
+     ═════════════════════════════════════════════════════════════════════ */
+
+  /* Global Layout Guards against overflow */
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Table and dynamic list scrollable containers */
+  .table-scroll,
+  #hotspot-table,
+  #agent-logs-list,
+  #compensation-claims-list {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain;
+  }
+
+  .table-dark-custom {
+    min-width: 540px; /* guarantees headers and columns remain readable while scrolling */
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     1. TABLET & LAPTOP VIEWPORTS (max-width: 991px)
+     ───────────────────────────────────────────────────────────────────── */
+  @media (max-width: 991px) {
+    /* Layout & Containers */
+    .page {
+      padding: 1rem 0.85rem !important;
+      max-width: 100% !important;
+    }
+    .card-dark {
+      padding: 1.1rem 1rem !important;
+    }
+
+    /* Grid Layouts - Tablet Stacking */
+    .g2 {
+      grid-template-columns: 1fr !important;
+      gap: 1rem !important;
+    }
+    .g3 {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 0.9rem !important;
+    }
+    .g4 {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 0.85rem !important;
+    }
+
+    /* GPS Live Map */
+    .gps-map {
+      height: 380px !important;
+    }
+
+    /* Citizen Hub Grid on Tablet */
+    .citizen-hub-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    /* Advisory Card Grid */
+    .advisory-card-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    /* Navigation for Tablet */
+    .top-nav-inner {
+      height: auto !important;
+      padding: 8px 12px 0 12px !important;
+      flex-wrap: wrap !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+    }
+    .top-nav-actions {
+      order: 2 !important;
+      margin-left: auto !important;
+    }
+    .nav-tabs-custom {
+      order: 3 !important;
+      width: 100% !important;
+      height: 44px !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+      margin-top: 6px !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    .nav-tabs-custom .nav-btn {
+      height: 42px !important;
+      font-size: 12.5px !important;
+      padding: 0 12px !important;
+      flex-shrink: 0 !important;
+      white-space: nowrap !important;
+    }
+
+    /* Modals on Tablet */
+    .vr-alert-box {
+      width: min(580px, 94vw) !important;
+      max-height: 90vh !important;
+    }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     2. SMALL TABLET & PHABLET VIEWPORTS (max-width: 768px)
+     ───────────────────────────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    /* Prevent iOS auto-zoom on form inputs by requiring min 16px */
+    .form-control-dark,
+    .form-select-dark,
+    input[type="text"],
+    input[type="number"],
+    input[type="datetime-local"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+
+    /* Citizen Hero Banner V2 */
+    .citizen-hero-v2 {
+      padding: 1.15rem 1rem !important;
+    }
+    .citizen-hero-v2 .d-flex.justify-content-between {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 12px !important;
+    }
+    .citizen-hero-v2 .d-flex.align-items-center.gap-2.flex-wrap {
+      width: 100% !important;
+    }
+    .citizen-hero-v2 .emergency-call-pill {
+      flex: 1 1 100% !important;
+      justify-content: center !important;
+      text-align: center !important;
+    }
+
+    /* Quick Nav */
+    .citizen-quick-nav {
+      padding: 6px 8px !important;
+      gap: 6px !important;
+    }
+    .quick-nav-pill {
+      font-size: 11.5px !important;
+      padding: 5px 10px !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Species Grid */
+    .species-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 8px !important;
+    }
+
+    /* Helpline Grid */
+    .helpline-grid {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
+
+    /* Forms */
+    .row.g-3 > [class*="col-"] {
+      width: 100% !important;
+    }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     3. MOBILE PHONES (max-width: 576px)
+     ───────────────────────────────────────────────────────────────────── */
+  @media (max-width: 576px) {
+    .page {
+      padding: 0.65rem 0.5rem !important;
+    }
+    .card-dark {
+      padding: 0.9rem 0.75rem !important;
+      border-radius: var(--radius-sm) !important;
+      margin-bottom: 0.75rem !important;
+    }
+
+    /* Top Nav on Mobile */
+    .top-nav {
+      background: rgba(13, 23, 27, 0.98) !important;
+    }
+    .top-nav-inner {
+      padding: 6px 8px 0 8px !important;
+    }
+    .top-nav .brand {
+      font-size: 14px !important;
+      gap: 6px !important;
+    }
+    .brand-icon-wrap {
+      width: 26px !important;
+      height: 26px !important;
+      font-size: 13px !important;
+    }
+    .top-nav .brand small {
+      display: none !important;
+    }
+    .top-nav-actions {
+      gap: 4px !important;
+    }
+    .portal-mode-toggle {
+      padding: 1px !important;
+      border-radius: 6px !important;
+    }
+    .portal-btn {
+      padding: 3px 6px !important;
+      font-size: 10.5px !important;
+      border-radius: 4px !important;
+    }
+    .lang-btn {
+      padding: 2px 5px !important;
+      font-size: 10.5px !important;
+    }
+    .nav-tabs-custom {
+      height: 38px !important;
+      margin-top: 4px !important;
+      gap: 2px !important;
+    }
+    .nav-tabs-custom .nav-btn {
+      height: 36px !important;
+      font-size: 11.5px !important;
+      padding: 0 8px !important;
+    }
+
+    /* KPI Stat Cards on Mobile (2x2 Grid) */
+    .g4 {
+      grid-template-columns: 1fr 1fr !important;
+      gap: 0.5rem !important;
+    }
+    .stat-card {
+      padding: 0.75rem 0.65rem !important;
+    }
+    .stat-val {
+      font-size: 1.4rem !important;
+    }
+    .stat-label {
+      font-size: 10.5px !important;
+    }
+
+    /* Grids & Cards */
+    .g3 {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem !important;
+    }
+    .g2 {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem !important;
+    }
+
+    /* Citizen Hub Grid on Mobile: 2 clean columns */
+    .citizen-hub-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px !important;
+      margin-bottom: 1rem !important;
+    }
+    .citizen-hub-card {
+      padding: 12px 10px !important;
+    }
+    .hub-card-icon {
+      width: 36px !important;
+      height: 36px !important;
+      font-size: 17px !important;
+      margin-bottom: 8px !important;
+    }
+    .hub-card-title {
+      font-size: 12.5px !important;
+      margin-bottom: 2px !important;
+    }
+    .hub-card-desc {
+      font-size: 11px !important;
+      line-height: 1.35 !important;
+    }
+
+    /* Radar Box on Mobile */
+    .radar-box {
+      padding: 0.85rem !important;
+      border-radius: var(--radius-sm) !important;
+    }
+    #citizen-radar-badge {
+      font-size: 12px !important;
+      padding: 3px 8px !important;
+    }
+    #citizen-radar-vname {
+      font-size: 14.5px !important;
+    }
+    #citizen-radar-score {
+      font-size: 10px !important;
+    }
+    #citizen-radar-dist {
+      font-size: 12.5px !important;
+      margin-top: 6px !important;
+    }
+    #citizen-radar-meta {
+      font-size: 10.5px !important;
+      gap: 8px !important;
+    }
+
+    /* Advisory Mini Cards */
+    .advisory-card-grid {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
+    .advisory-mini-card {
+      padding: 10px 12px !important;
+    }
+
+    /* GPS Map on Mobile */
+    .gps-map {
+      height: 290px !important;
+    }
+    .gps-info {
+      left: 6px !important;
+      right: 6px !important;
+      top: 6px !important;
+      min-width: 0 !important;
+      width: auto !important;
+      padding: 6px 10px !important;
+    }
+    .gps-actions {
+      width: 100% !important;
+      gap: 4px !important;
+    }
+    .gps-actions button {
+      flex: 1 1 calc(50% - 4px) !important;
+      padding: 6px 8px !important;
+      font-size: 11px !important;
+      text-align: center !important;
+    }
+    .gps-legend-row {
+      gap: 6px !important;
+      font-size: 11px !important;
+    }
+
+    /* Emergency SOS on Mobile */
+    .sos-box {
+      padding: 1.1rem 0.8rem !important;
+    }
+    .sos-btn {
+      width: 100% !important;
+      padding: 13px !important;
+      font-size: 14px !important;
+      letter-spacing: 0.02em !important;
+    }
+
+    /* Modals & Dialogs on Mobile */
+    .vr-alert-box {
+      width: 96vw !important;
+      max-height: 92vh !important;
+      padding: 14px 12px !important;
+      border-radius: var(--radius-md) !important;
+    }
+    .vr-alert-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* High-Priority Emergency Broadcast Bottom Sheet */
+    .citizen-emergency-popup {
+      padding: 0 !important;
+      align-items: flex-end !important;
+    }
+    .citizen-emergency-box {
+      width: 100% !important;
+      max-height: 90vh !important;
+      border-radius: 20px 20px 0 0 !important;
+      border-bottom: none !important;
+      padding: 1.15rem 1rem !important;
+    }
+    .citizen-emergency-title {
+      font-size: 15px !important;
+    }
+    .citizen-emergency-footer {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    .emergency-call-btn,
+    .emergency-ack-btn {
+      width: 100% !important;
+      padding: 12px !important;
+      font-size: 13.5px !important;
+    }
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     4. ULTRA-COMPACT MOBILE PHONES (max-width: 380px)
+     ───────────────────────────────────────────────────────────────────── */
+  @media (max-width: 380px) {
+    .page {
+      padding: 0.5rem 0.35rem !important;
+    }
+    .citizen-hub-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .g4 {
+      grid-template-columns: 1fr !important;
+    }
+    .species-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .gps-map {
+      height: 250px !important;
+    }
+    .top-nav .brand span:first-of-type {
+      font-size: 13px !important;
+    }
+  }
+
 </style>
 
 
