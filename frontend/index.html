@@ -4010,15 +4010,20 @@
 
       <div style="margin-bottom:14px;">
         <label class="form-label-dark">Select Your Village / વિસ્તાર પસંદ કરો</label>
-        <select id="citizen-radar-village" class="form-select-dark" onchange="updateVillageRadar()" style="font-size:14px;padding:10px 14px;">
-          <option value="V001" selected>Sasan Gir (સાસણ ગીર) — Gir Somnath</option>
-          <option value="V002">Dhari (ધારી) — Amreli</option>
-          <option value="V003">Talala (તાલાલા) — Gir Somnath</option>
-          <option value="V004">Visavadar (વિસાવદર) — Junagadh</option>
-          <option value="V005">Una (ઉના) — Gir Somnath</option>
-          <option value="V006">Mendarda (મેંદરડા) — Junagadh</option>
-          <option value="V007">Junagadh (જૂનાગઢ) — Junagadh</option>
-        </select>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="citizen-radar-village" class="form-select-dark" onchange="updateVillageRadar(true)" style="flex:1;min-width:220px;font-size:14px;padding:10px 14px;">
+            <option value="V001" selected>Sasan Gir (સાસણ ગીર) — Gir Somnath</option>
+            <option value="V002">Dhari (ધારી) — Amreli</option>
+            <option value="V003">Talala (તાલાલા) — Gir Somnath</option>
+            <option value="V004">Visavadar (વિસાવદર) — Junagadh</option>
+            <option value="V005">Una (ઉના) — Gir Somnath</option>
+            <option value="V006">Mendarda (મેંદરડા) — Junagadh</option>
+            <option value="V007">Junagadh (જૂનાગઢ) — Junagadh</option>
+          </select>
+          <button type="button" class="btn-primary" style="padding:10px 18px;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:6px;" onclick="updateVillageRadar(true)" title="Update radar threat level for selected village">
+            <i class="bi bi-arrow-clockwise" id="radar-refresh-btn-icon"></i> Update Radar / ચકાસો
+          </button>
+        </div>
       </div>
 
       <!-- Radar Status Box -->
@@ -4026,8 +4031,8 @@
         <div style="flex:1;">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
             <div style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;font-weight:700;">CURRENT THREAT LEVEL / હાલનું જોખમ</div>
-            <div id="radar-live-indicator" style="font-size:11px;color:#10b981;font-weight:700;display:flex;align-items:center;gap:6px;">
-              <span class="live-dot-pulse"></span> <span id="radar-live-text">● LIVE (1s AUTO-SYNC &amp; WEBSOCKET)</span>
+            <div style="font-size:11px;color:var(--text-secondary);font-weight:600;display:flex;align-items:center;gap:6px;">
+              <i class="bi bi-shield-check text-primary"></i> <span>ON-DEMAND EVALUATION</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
@@ -4039,8 +4044,8 @@
             ⚠️ Asiatic Lion movement recorded within 0.8 km of village periphery.
           </div>
           <div id="citizen-radar-meta" style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:15px;flex-wrap:wrap;">
-            <span><i class="bi bi-broadcast me-1 text-primary"></i>Live Sensor &amp; Patrol Telemetry</span>
-            <span id="radar-last-sync-time"><i class="bi bi-clock me-1"></i>Last evaluated: Just now</span>
+            <span><i class="bi bi-broadcast me-1 text-primary"></i>Sensor &amp; Patrol Telemetry</span>
+            <span id="radar-last-sync-time"><i class="bi bi-clock me-1"></i>Updated: Just now</span>
           </div>
         </div>
       </div>
@@ -4085,7 +4090,7 @@
             <span id="regional-last-sync-time" style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><i class="bi bi-clock me-1 text-primary"></i>Last evaluated: Just now</span>
           </div>
           <div class="d-flex align-items-center gap-2">
-            <button class="btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="updateVillageRadar()" title="Instant Live Refresh">
+            <button class="btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="loadCitizenRegionalAlerts(true)" title="Instant Live Refresh">
               <i class="bi bi-arrow-clockwise me-1"></i>Refresh
             </button>
             <button class="btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="showTab('alerts')">
@@ -4934,7 +4939,8 @@ function switchCitizenView(view) {
 }
 
 async function loadCitizenPortal() {
-  updateVillageRadar();   // fetches live data and populates radar + regional alerts
+  updateVillageRadar();   // initial village radar evaluation
+  if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
   switchCitizenView(_activeCitizenView || 'radar');
 }
 
@@ -4957,10 +4963,15 @@ const _ADVISORY = {
   ],
 };
 
-async function updateVillageRadar() {
+async function updateVillageRadar(isUserAction = false) {
   const sel = document.getElementById('citizen-radar-village');
   if (!sel) return;
   const vid = sel.value;
+
+  const refreshBtnIcon = document.getElementById('radar-refresh-btn-icon');
+  if (isUserAction && refreshBtnIcon) {
+    refreshBtnIcon.classList.add('spin-fast');
+  }
 
   // UI element refs
   const box     = document.getElementById('citizen-radar-box');
@@ -4992,7 +5003,7 @@ async function updateVillageRadar() {
     );
     const villages = villagesRes?.data || [];
 
-    // ── 1. COMPUTE THREAT LEVEL FOR EVERY VILLAGE & UPDATE DROPDOWN ──
+    // ── 1. COMPUTE THREAT LEVEL FOR EVERY VILLAGE ──
     const villageThreatMap = {};
     const sevOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 
@@ -5031,9 +5042,6 @@ async function updateVillageRadar() {
         count: vAlerts.length
       };
     });
-
-    // Note: Do NOT mutate sel.options or opt.textContent every second!
-    // Mutating select options every second causes the dropdown to reload and close while the user is selecting.
 
     // ── 2. SELECTED VILLAGE THREAT LEVEL ─────────────────────────────
     const village = villages.find(v => v.id === vid) || { name: '—', id: vid, risk_level: 'LOW' };
@@ -5076,7 +5084,11 @@ async function updateVillageRadar() {
 
     // Update last sync time
     if (syncEl) {
-      syncEl.innerHTML = `<i class="bi bi-clock me-1"></i>Last evaluated: ${new Date().toLocaleTimeString()} (Live 1s Auto-Sync)`;
+      syncEl.innerHTML = `<i class="bi bi-clock me-1"></i>Updated: ${new Date().toLocaleTimeString()} ${isUserAction ? '(User Verified)' : ''}`;
+    }
+
+    if (isUserAction && typeof showToast === 'function') {
+      showToast(`Radar updated for ${village.name || vid}`, 'info', 2000);
     }
 
     // ── 3. ADVISORY CARDS PER THREAT LEVEL ───────────────────────────
@@ -5098,7 +5110,7 @@ async function updateVillageRadar() {
 
     const regLiveEl = document.getElementById('regional-last-sync-time');
     if (regLiveEl) {
-      regLiveEl.innerHTML = `<i class="bi bi-clock me-1 text-primary"></i>Last evaluated: ${new Date().toLocaleTimeString()} (1s Live Sync)`;
+      regLiveEl.innerHTML = `<i class="bi bi-clock me-1 text-primary"></i>Updated: ${new Date().toLocaleTimeString()}`;
     }
 
     if (raEl) {
@@ -5171,6 +5183,10 @@ async function updateVillageRadar() {
     console.error('Radar fetch error:', err);
     if (badge) { badge.className = 'badge-low'; badge.textContent = 'RADAR OFFLINE'; }
     if (distEl) distEl.textContent = 'Could not load live threat data. Please check network connection.';
+  } finally {
+    if (refreshBtnIcon) {
+      setTimeout(() => refreshBtnIcon.classList.remove('spin-fast'), 350);
+    }
   }
 }
 
@@ -5214,7 +5230,7 @@ function fetchCitizenGps(updateRadarOnly) {
         const formSel = document.getElementById('citizen-village');
         if (formSel) formSel.value = nearest.id;
       }
-      updateVillageRadar();
+      updateVillageRadar(true);
     },
     err => {
       if (msgEl) msgEl.textContent = 'Location access not permitted. Using Sasan Gir default.';
@@ -5920,33 +5936,72 @@ async function trackCitizenClaim() {
   }
 }
 
-async function loadCitizenRegionalAlerts() {
-  const el = document.getElementById('citizen-recent-alerts');
-  if (!el) return;
+async function loadCitizenRegionalAlerts(isUserAction = false) {
+  const raEl = document.getElementById('citizen-recent-alerts');
+  const cntEl = document.getElementById('citizen-regional-count');
+  const regLiveEl = document.getElementById('regional-last-sync-time');
+  if (!raEl) return;
   try {
     const res = await api('/api/alerts');
-    if (res && res.success && res.data.length) {
-      el.innerHTML = res.data.slice(0, 3).map(a => `
-        <div style="background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${a.severity==='HIGH'?'var(--high)':a.severity==='MEDIUM'?'var(--medium)':'var(--low)'};">
-          <div style="display:flex;justify-content:space-between;font-size:11px;">
-            <strong>${a.village_name}</strong>
-            <span style="color:var(--muted);">${timeAgo(a.timestamp)}</span>
-          </div>
-          <div style="font-size:12px;margin-top:2px;">${a.gu_text || a.en_text}</div>
-        </div>
-      `).join('');
-      return;
+    const allAlerts = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+    if (cntEl) {
+      cntEl.textContent = `${allAlerts.length} LIVE WARNINGS`;
     }
-  } catch(e) {}
-  el.innerHTML = `
-    <div style="background:var(--surface2);border-radius:6px;padding:8px 10px;border-left:3px solid var(--high);">
-      <div style="display:flex;justify-content:space-between;font-size:11px;">
-        <strong>Sasan Gir (સાસણ ગીર)</strong>
-        <span style="color:var(--muted);">Active Now</span>
-      </div>
-      <div style="font-size:12px;margin-top:2px;">ચેતવણી: સાસણ ગીર વિસ્તારમાં સિંહની હિલચાલ નોંધાઈ છે. પશુધન વાડામાં રાખો.</div>
-    </div>
-  `;
+    if (regLiveEl) {
+      regLiveEl.innerHTML = `<i class="bi bi-clock me-1 text-primary"></i>Updated: ${new Date().toLocaleTimeString()} ${isUserAction ? '(Refreshed)' : ''}`;
+    }
+    const badgeClasses = { CRITICAL: 'badge-high', HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low' };
+    if (allAlerts.length) {
+      raEl.innerHTML = allAlerts.map(a => {
+        const sev  = (a.severity || 'LOW').toUpperCase();
+        const col  = sev === 'HIGH' || sev === 'CRITICAL' ? 'var(--high)' : sev === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
+        const icon = sev === 'HIGH' || sev === 'CRITICAL' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🟢';
+        const distStr = a.distance_km != null ? `📍 ${parseFloat(a.distance_km).toFixed(1)} km away` : '';
+        const spIcon = (typeof speciesIcon === 'function') ? speciesIcon(a.species) : '🐾';
+
+        const tsMillis = (typeof parseTs === 'function') ? parseTs(a.timestamp) : (new Date(a.timestamp).getTime() || Date.now());
+        const diffSec = Math.max(0, Math.floor((Date.now() - tsMillis) / 1000));
+        let liveSecText = '';
+        if (diffSec < 4) {
+          liveSecText = 'Just now (1s ago)';
+        } else if (diffSec < 60) {
+          liveSecText = `${diffSec}s ago`;
+        } else {
+          liveSecText = (typeof timeAgo === 'function') ? timeAgo(a.timestamp) : `${Math.floor(diffSec / 60)}m ago`;
+        }
+        const clockTime = (typeof formatAlertClockTime === 'function') ? formatAlertClockTime(a.timestamp) : '';
+
+        return `
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;border-left:4px solid ${col};">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:13px;">${icon}</span>
+              <strong style="font-size:13px;color:var(--text);">${a.village_name || 'Forest Sector'}</strong>
+              <span style="color:var(--muted);">· ${spIcon} ${a.species || ''}</span>
+              <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:2px 7px;">${sev} RISK</span>
+              <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:9.5px;padding:2px 6px;border:1px solid rgba(16,185,129,0.3);"><i class="bi bi-shield-check me-1"></i>Officer Broadcast</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-wrap:wrap;">
+              <span>${distStr}</span>
+              ${clockTime ? `<span style="color:var(--text-secondary);font-size:10.5px;"><i class="bi bi-clock me-1"></i>${clockTime}</span>` : ''}
+              <span class="badge" style="background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.25);font-family:monospace;font-size:10.5px;padding:2px 7px;">
+                <i class="bi bi-stopwatch me-1"></i>${liveSecText}
+              </span>
+            </div>
+          </div>
+          <div style="font-size:12.5px;color:var(--text);line-height:1.5;">${a.en_text || a.message || ''}</div>
+          ${a.gu_text ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;font-style:italic;line-height:1.45;">${a.gu_text}</div>` : ''}
+        </div>`;
+      }).join('');
+    } else {
+      raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center;">No regional warnings on record yet. ✅ All sectors clear.</div>`;
+    }
+    if (isUserAction && typeof showToast === 'function') {
+      showToast('Regional warnings refreshed', 'info', 1800);
+    }
+  } catch(e) {
+    console.error('Error loading citizen regional alerts:', e);
+  }
 }
 
 
@@ -6781,9 +6836,9 @@ async function _crossDeviceSyncTick() {
       if (pageId === 'page-incidents')   { if (typeof loadIncidents   === 'function') loadIncidents(); }
       if (pageId === 'page-hotspots')    { if (typeof loadHotspots    === 'function') loadHotspots(); }
       if (pageId === 'page-compensation'){ if (typeof loadClaims      === 'function') loadClaims(); }
-      // Citizen Safety Radar — refresh threat level in real time
+      // Citizen page — regional warnings update on live sync, Village Safety Radar stays strictly on-demand
       if (pageId === 'page-citizen') {
-        updateVillageRadar();
+        if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
       }
       // Show a subtle "Data updated" toast so user knows sync happened
       if (typeof showToast === 'function') {
@@ -6794,16 +6849,6 @@ async function _crossDeviceSyncTick() {
 }
 
 setInterval(_crossDeviceSyncTick, 1000);
-
-// ── 1-SECOND PERIODIC API RECALL ───────────────────────────────────────────
-// Automatically recalls the API every 1 second when citizen page is open
-// so citizen threat level immediately updates to what the officer set.
-setInterval(() => {
-  const citizenPage = document.getElementById('page-citizen');
-  if (citizenPage && citizenPage.classList.contains('active')) {
-    updateVillageRadar();
-  }
-}, 1000);
 
 // ── LIVE WEBSOCKET (websocat & browser compatible) ─────────────────────────
 let _vanrakshakWS = null;
@@ -6818,8 +6863,8 @@ function initLiveWebSocket() {
     _vanrakshakWS = new WebSocket(wsUrl);
     _vanrakshakWS.onopen = () => {
       console.log('📡 Connected to VanRakshak Live WebSocket on port 8765');
-      const badge = document.getElementById('radar-live-text');
-      if (badge) badge.innerHTML = '● LIVE (WEBSOCKET CONNECTED)';
+      const badge = document.getElementById('regional-live-text');
+      if (badge) badge.innerHTML = 'LIVE (WEBSOCKET)';
     };
     _vanrakshakWS.onmessage = (event) => {
       try {
@@ -6830,7 +6875,7 @@ function initLiveWebSocket() {
         if (payload.type === 'THREAT_UPDATE') {
           const citizenPage = document.getElementById('page-citizen');
           if (citizenPage && citizenPage.classList.contains('active')) {
-            updateVillageRadar();
+            if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
           }
           if (typeof loadAlerts === 'function') loadAlerts();
           if (typeof loadDashboard === 'function') loadDashboard(false);
@@ -6841,8 +6886,8 @@ function initLiveWebSocket() {
       } catch (_) {}
     };
     _vanrakshakWS.onerror = () => {
-      const badge = document.getElementById('radar-live-text');
-      if (badge) badge.innerHTML = '● LIVE (SSE STREAM &amp; 5s SYNC)';
+      const badge = document.getElementById('regional-live-text');
+      if (badge) badge.innerHTML = 'LIVE (SSE STREAM)';
       initSSE();
     };
     _vanrakshakWS.onclose = () => {
@@ -6867,7 +6912,7 @@ function initSSE() {
         if (d.type === 'THREAT_UPDATE') {
           const citizenPage = document.getElementById('page-citizen');
           if (citizenPage && citizenPage.classList.contains('active')) {
-            updateVillageRadar();
+            if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
           }
           if (typeof loadAlerts === 'function') loadAlerts();
           if (typeof loadDashboard === 'function') loadDashboard(false);
