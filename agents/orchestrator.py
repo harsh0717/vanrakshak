@@ -607,23 +607,26 @@ class Orchestrator:
 
     def get_dashboard(self) -> dict:
         active_incidents  = sum(1 for i in self.incidents if i.get("status") not in ("RESOLVED",))
-        high_risk         = sum(1 for r in self.risk_assessments if r["risk_level"] == "HIGH")
-        avg_confidence    = (
-            sum(r["confidence"] for r in self.risk_assessments) / max(1, len(self.risk_assessments))
-        )
-        pending_approvals = len(self.pending_approvals)
 
-        # Enrich villages with risk level
+        # Enrich villages with risk level (prioritize officer override on village object)
         risk_map = {r["village_id"]: r for r in self.risk_assessments}
         villages_enriched = []
         for v in self.villages:
             r = risk_map.get(v["id"], {})
+            risk_level = v.get("risk_level") or r.get("risk_level", "LOW")
+            risk_score = v.get("risk_score") if v.get("risk_score") is not None else r.get("risk_score", 0.0)
             villages_enriched.append({
                 **v,
-                "risk_score":  r.get("risk_score", 0.0),
-                "risk_level":  r.get("risk_level", "LOW"),
-                "confidence":  r.get("confidence", 0.70),
+                "risk_score":  risk_score,
+                "risk_level":  risk_level,
+                "confidence":  r.get("confidence", 0.95),
             })
+
+        high_risk         = sum(1 for v in villages_enriched if v["risk_level"] == "HIGH")
+        avg_confidence    = (
+            sum(v.get("confidence", 0.85) for v in villages_enriched) / max(1, len(villages_enriched))
+        )
+        pending_approvals = len(self.pending_approvals)
 
         recent_sightings = sorted(
             self.sightings, key=lambda s: s.get("timestamp", ""), reverse=True

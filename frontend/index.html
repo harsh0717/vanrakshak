@@ -6058,10 +6058,24 @@ async function loadDashboard(isManual = false) {
 function renderVillageTable() {
   if (!_dashData || !_dashData.villages) return;
   const vtb = document.getElementById('village-tbody');
+  if (!vtb) return;
   const countBadge = document.getElementById('village-filtered-count');
   const search = (document.getElementById('villageSearchInput')?.value || '').toLowerCase().trim();
 
   let list = _dashData.villages;
+
+  // Apply any active local overrides so background sync ticks never revert officer settings
+  if (window._villageThreatOverrides) {
+    const now = Date.now();
+    list.forEach(v => {
+      const ov = window._villageThreatOverrides[v.id];
+      if (ov && (now - ov.ts < 20000)) {
+        v.risk_level = ov.risk;
+        v.risk_score = ov.risk === 'HIGH' ? 0.88 : ov.risk === 'MEDIUM' ? 0.58 : 0.22;
+      }
+    });
+  }
+
   if (_villageRiskFilter !== 'ALL') {
     list = list.filter(v => (v.risk_level || '').toUpperCase() === _villageRiskFilter);
   }
@@ -6078,20 +6092,43 @@ function renderVillageTable() {
     return;
   }
 
+  // In-place DOM update if all rows already exist: avoids tearing down DOM and closing/resetting dropdowns
+  const existingRows = vtb.querySelectorAll('tr[id^="village-row-"]');
+  if (existingRows.length === list.length) {
+    let allFound = true;
+    for (const v of list) {
+      const row = document.getElementById(`village-row-${v.id}`);
+      if (!row) { allFound = false; break; }
+      const sel = row.querySelector('select.village-threat-select');
+      if (sel && document.activeElement !== sel) {
+        sel.value = v.risk_level;
+        sel.style.color = v.risk_level === 'HIGH' ? 'var(--high)' : v.risk_level === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
+      }
+      const scoreCell = row.querySelector('.village-score-cell');
+      if (scoreCell) {
+        scoreCell.innerHTML = `${riskBar(v.risk_score || 0, v.risk_level)}<span style="font-size:11px;color:var(--muted);margin-left:4px;">${((v.risk_score || 0) * 100).toFixed(0)}%</span>`;
+      }
+    }
+    if (allFound) return;
+  }
+
+  // If user currently has focus on any element inside the table, do not blow away table innerHTML
+  if (document.activeElement && vtb.contains(document.activeElement)) return;
+
   vtb.innerHTML = list.map(v => `
-    <tr class="table-row-clickable" onclick="inspectVillage('${v.id}')" title="Click to view village intelligence & past encounters">
+    <tr id="village-row-${v.id}" class="table-row-clickable" onclick="inspectVillage('${v.id}')" title="Click to view village intelligence & past encounters">
       <td style="font-weight:600;">
         ${v.name}
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">(${v.id})</span>
       </td>
       <td onclick="event.stopPropagation()">
-        <select class="form-select-dark" onchange="setVillageThreatLevel('${v.id}', this.value)" style="font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;font-weight:700;color:${v.risk_level==='HIGH'?'var(--high)':v.risk_level==='MEDIUM'?'var(--medium)':'var(--low)'};background:var(--surface);">
+        <select class="form-select-dark village-threat-select" onchange="setVillageThreatLevel('${v.id}', this.value)" style="font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;font-weight:700;color:${v.risk_level==='HIGH'?'var(--high)':v.risk_level==='MEDIUM'?'var(--medium)':'var(--low)'};background:var(--surface);">
           <option value="HIGH" ${v.risk_level==='HIGH'?'selected':''}>🔴 HIGH</option>
           <option value="MEDIUM" ${v.risk_level==='MEDIUM'?'selected':''}>🟡 MEDIUM</option>
           <option value="LOW" ${v.risk_level==='LOW'?'selected':''}>🟢 LOW</option>
         </select>
       </td>
-      <td>
+      <td class="village-score-cell">
         ${riskBar(v.risk_score||0, v.risk_level)}
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">${((v.risk_score||0)*100).toFixed(0)}%</span>
       </td>
@@ -6252,14 +6289,46 @@ function renderAlertsSummary() {
 
 // ── OFFICER SET VILLAGE THREAT LEVEL ────────────────────────
 async function setVillageThreatLevel(vid, newRisk) {
+  // 1. Instantly record override with timestamp so background sync never flips it back
+  if (!window._villageThreatOverrides) window._villageThreatOverrides = {};
+  window._villageThreatOverrides[vid] = { risk: newRisk, ts: Date.now() };
+
+  // 2. Optimistically update local _dashData so any re-renders use this level immediately
+  if (_dashData && _dashData.villages) {
+    const v = _dashData.villages.find(x => x.id === vid);
+    if (v) {
+      v.risk_level = newRisk;
+      v.risk_score = newRisk === 'HIGH' ? 0.88 : newRisk === 'MEDIUM' ? 0.58 : 0.22;
+    }
+  }
+
+  // 3. Immediately reflect in DOM in-place without page jump or closing dropdowns
+  const row = document.getElementById(`village-row-${vid}`);
+  if (row) {
+    const sel = row.querySelector('select.village-threat-select');
+    if (sel) {
+      sel.value = newRisk;
+      sel.style.color = newRisk === 'HIGH' ? 'var(--high)' : newRisk === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
+    }
+    const scoreCell = row.querySelector('.village-score-cell');
+    if (scoreCell) {
+      const score = newRisk === 'HIGH' ? 0.88 : newRisk === 'MEDIUM' ? 0.58 : 0.22;
+      scoreCell.innerHTML = `${riskBar(score, newRisk)}<span style="font-size:11px;color:var(--muted);margin-left:4px;">${Math.round(score * 100)}%</span>`;
+    }
+  }
+
+  // 4. Update GPS map in-place
+  if (_dashData && window.syncGpsMapWithData) {
+    window.syncGpsMapWithData(_dashData);
+  }
+
+  // 5. Send threat override to server
   try {
     const res = await api(`/api/villages/${vid}/threat`, 'POST', { risk_level: newRisk });
     if (res && res.success) {
       if (typeof showToast === 'function') {
-        showToast(`✓ Threat level for ${res.data.village_name || vid} set to ${newRisk}! Syncing to citizens…`, 'success', 3000);
+        showToast(`⚡ Threat level for ${res.data.village_name || vid} set to ${newRisk}! Syncing to citizens.`, 'success', 3000);
       }
-      if (typeof loadDashboard === 'function') loadDashboard(false);
-      if (typeof updateVillageRadar === 'function') updateVillageRadar();
       const modal = document.getElementById('villageDetailModal');
       if (modal && modal.classList.contains('show')) {
         inspectVillage(vid);
@@ -6267,6 +6336,7 @@ async function setVillageThreatLevel(vid, newRisk) {
     }
   } catch (err) {
     console.error('Failed to set threat level:', err);
+    delete window._villageThreatOverrides[vid];
     if (typeof showToast === 'function') {
       showToast('Error updating threat level', 'error', 3000);
     }
@@ -6726,13 +6796,11 @@ async function _crossDeviceSyncTick() {
 setInterval(_crossDeviceSyncTick, 1000);
 
 // ── 1-SECOND PERIODIC API RECALL ───────────────────────────────────────────
-// Automatically recalls the API every 1 second so citizen threat level
-// immediately updates to what the officer set.
+// Automatically recalls the API every 1 second when citizen page is open
+// so citizen threat level immediately updates to what the officer set.
 setInterval(() => {
   const citizenPage = document.getElementById('page-citizen');
-  const raEl = document.getElementById('citizen-recent-alerts');
-  // Always update if on citizen page or if the regional warnings element exists in DOM
-  if ((citizenPage && citizenPage.classList.contains('active')) || raEl) {
+  if (citizenPage && citizenPage.classList.contains('active')) {
     updateVillageRadar();
   }
 }, 1000);
@@ -6757,12 +6825,18 @@ function initLiveWebSocket() {
       try {
         const payload = JSON.parse(event.data);
         console.log('⚡ WebSocket Live Push Event:', payload);
-        // Instantly refresh threat level & alerts
-        updateVillageRadar();
-        if (typeof loadAlerts === 'function') loadAlerts();
-        if (typeof loadDashboard === 'function') loadDashboard(false);
-        if (payload.type === 'THREAT_UPDATE' && typeof showToast === 'function') {
-          showToast('⚡ Live WebSocket: Wildlife threat status updated!', 'info', 2500);
+        if (payload.timestamp) _syncLastKnown = payload.timestamp;
+        if (payload.last_updated) _syncLastKnown = payload.last_updated;
+        if (payload.type === 'THREAT_UPDATE') {
+          const citizenPage = document.getElementById('page-citizen');
+          if (citizenPage && citizenPage.classList.contains('active')) {
+            updateVillageRadar();
+          }
+          if (typeof loadAlerts === 'function') loadAlerts();
+          if (typeof loadDashboard === 'function') loadDashboard(false);
+          if (typeof showToast === 'function') {
+            showToast('⚡ Live WebSocket: Wildlife threat status updated!', 'info', 2500);
+          }
         }
       } catch (_) {}
     };
@@ -6789,8 +6863,12 @@ function initSSE() {
     _sseStream.onmessage = (e) => {
       try {
         const d = JSON.parse(e.data);
+        if (d.last_updated) _syncLastKnown = d.last_updated;
         if (d.type === 'THREAT_UPDATE') {
-          updateVillageRadar();
+          const citizenPage = document.getElementById('page-citizen');
+          if (citizenPage && citizenPage.classList.contains('active')) {
+            updateVillageRadar();
+          }
           if (typeof loadAlerts === 'function') loadAlerts();
           if (typeof loadDashboard === 'function') loadDashboard(false);
         }
