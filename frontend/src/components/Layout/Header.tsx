@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { isBackendOnline } from '../../api/client';
+import { isBackendOnline, onBackendStatusChange } from '../../api/client';
 
 export default function Header() {
   const [time, setTime] = useState(() => new Date().toLocaleTimeString());
+  const [online, setOnline] = useState(() => isBackendOnline());
 
   useEffect(() => {
     const id = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
-    return () => clearInterval(id);
+    const unsub = onBackendStatusChange((status) => setOnline(status));
+    return () => {
+      clearInterval(id);
+      unsub();
+    };
   }, []);
 
   return (
@@ -30,6 +35,24 @@ export default function Header() {
             alignItems: 'center',
             gap: 6,
             padding: '4px 10px',
+            background: 'rgba(56,139,253,0.14)',
+            border: '1px solid rgba(56,139,253,0.4)',
+            borderRadius: 4,
+          }}
+          title="Logged in as System Administrator"
+        >
+          <span style={{ fontSize: 12 }}>👤</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue, #79c0ff)', letterSpacing: '0.04em' }}>
+            ADMIN
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 10px',
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
             borderRadius: 4,
@@ -38,11 +61,11 @@ export default function Header() {
           <div
             className="status-dot"
             style={{
-              background: isBackendOnline() ? 'var(--accent-green)' : 'var(--accent-red)',
+              background: online ? 'var(--accent-green)' : 'var(--accent-red)',
             }}
           />
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            {isBackendOnline() ? 'API Online' : 'API Offline'}
+            {online ? 'API Online' : 'API Offline'}
           </span>
         </div>
 

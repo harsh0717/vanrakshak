@@ -1,16 +1,16 @@
-import { getDashboard } from '../../api/client';
+import { getDashboard, isBackendOnline } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import LoadingSpinner from '../Common/LoadingSpinner';
 
 const villages = [
-  { id: 'sasan', name: 'Sasan Gir', x: 50, y: 42, risk: 'HIGH', incidents: 2 },
-  { id: 'dhari', name: 'Dhari', x: 20, y: 25, risk: 'MEDIUM', incidents: 1 },
-  { id: 'talala', name: 'Talala', x: 68, y: 60, risk: 'HIGH', incidents: 1 },
-  { id: 'mendarda', name: 'Mendarda', x: 34, y: 58, risk: 'LOW', incidents: 1 },
-  { id: 'visavadar', name: 'Visavadar', x: 15, y: 68, risk: 'MEDIUM', incidents: 1 },
-  { id: 'una', name: 'Una', x: 80, y: 78, risk: 'MEDIUM', incidents: 1 },
-  { id: 'kodinar', name: 'Kodinar', x: 72, y: 88, risk: 'LOW', incidents: 0 },
-  { id: 'jafrabad', name: 'Jafrabad', x: 88, y: 55, risk: 'LOW', incidents: 0 },
+  { id: 'VLG001', name: 'Sasan Gir', x: 48, y: 42, risk: 'HIGH', incidents: 2 },
+  { id: 'VLG002', name: 'Dhari', x: 22, y: 26, risk: 'MEDIUM', incidents: 1 },
+  { id: 'VLG003', name: 'Khambha', x: 74, y: 32, risk: 'MEDIUM', incidents: 1 },
+  { id: 'VLG004', name: 'Una', x: 80, y: 76, risk: 'MEDIUM', incidents: 1 },
+  { id: 'VLG005', name: 'Rajula', x: 88, y: 50, risk: 'LOW', incidents: 0 },
+  { id: 'VLG006', name: 'Talala', x: 64, y: 60, risk: 'HIGH', incidents: 2 },
+  { id: 'VLG007', name: 'Mendarda', x: 34, y: 58, risk: 'LOW', incidents: 1 },
+  { id: 'VLG008', name: 'Kodinar', x: 70, y: 88, risk: 'LOW', incidents: 0 },
 ];
 
 const colors: Record<string, string> = {
@@ -49,10 +49,13 @@ export default function DashboardPage() {
       <section className="vr-hero">
         <div>
           <div className="vr-title">🐾 VanRakshak AI Command Center</div>
-          <div className="vr-sub">Human–wildlife conflict intelligence · Gir Forest Region · Real-time monitoring dashboard</div>
+          <div className="vr-sub">Human–wildlife conflict intelligence · Gir Protected Area · Simulated Decision Support</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div className="vr-live"><span className="vr-live-dot" /> SYSTEM ONLINE</div>
+          <div className="vr-live" style={{ color: isBackendOnline() ? 'var(--accent-green)' : 'var(--accent-orange)' }}>
+            <span className="vr-live-dot" style={{ background: isBackendOnline() ? 'var(--accent-green)' : 'var(--accent-orange)' }} />
+            {isBackendOnline() ? 'BACKEND CONNECTED · DEMO MODE' : 'SIMULATION MODE · OFFLINE'}
+          </div>
           <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 5 }}>Auto-refresh 30s · {new Date(data.last_updated).toLocaleTimeString()}</div>
         </div>
       </section>
@@ -64,11 +67,11 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', gap: 6 }}><span className="vr-badge" style={{ color: colors.HIGH, background: `${colors.HIGH}20` }}>{s.incidents_high} HIGH</span><span className="vr-badge" style={{ color: colors.MEDIUM, background: `${colors.MEDIUM}20` }}>{s.incidents_medium} MED</span><span className="vr-badge" style={{ color: colors.LOW, background: `${colors.LOW}20` }}>{s.incidents_low} LOW</span></div>
         </div>
         <div className="vr-kpi" style={{ borderTop: '3px solid var(--accent-blue)' }}>
-          <div className="vr-kpi-label">AI Confidence</div><div className="vr-kpi-value" style={{ color: confidence >= 80 ? 'var(--accent-green)' : 'var(--accent-orange)' }}>{confidence}%</div>
+          <div className="vr-kpi-label">Decision Confidence Indicator</div><div className="vr-kpi-value" style={{ color: confidence >= 80 ? 'var(--accent-green)' : 'var(--accent-orange)' }}>{confidence}%</div>
           <div className="vr-progress"><div style={{ width: `${confidence}%`, background: confidence >= 80 ? 'var(--accent-green)' : 'var(--accent-orange)' }} /></div>
         </div>
         <div className="vr-kpi" style={{ borderTop: '3px solid var(--accent-purple)' }}>
-          <div className="vr-kpi-label">Wildlife Sightings Today</div><div className="vr-kpi-value">{s.sightings_today}</div><div className="vr-kpi-foot">Across monitored villages</div>
+          <div className="vr-kpi-label">Sightings — Last 30 Days</div><div className="vr-kpi-value">{s.sightings_today}</div><div className="vr-kpi-foot">Across monitored villages</div>
         </div>
         <div className="vr-kpi" style={{ borderTop: '3px solid var(--accent-green)' }}>
           <div className="vr-kpi-label">Response Teams</div><div className="vr-kpi-value" style={{ color: 'var(--accent-green)' }}>{s.response_teams_available}<span style={{ color: 'var(--text-muted)', fontSize: 20 }}>/{s.response_teams_total}</span></div><div className="vr-kpi-foot">{s.pending_approvals} pending officer approvals</div>
@@ -77,7 +80,7 @@ export default function DashboardPage() {
 
       <section className="vr-grid">
         <div className="vr-card">
-          <div className="vr-card-head"><div><div className="vr-card-title">Gir Region · Risk Intelligence Map</div><div className="vr-card-sub">Hotspots and incident concentration by village</div></div><span className="vr-badge" style={{ color: 'var(--accent-orange)', background: 'var(--accent-orange-dim)' }}>ILLUSTRATIVE</span></div>
+          <div className="vr-card-head"><div><div className="vr-card-title">Gir Region · Risk Intelligence Map</div><div className="vr-card-sub">Hotspots and incident concentration across 8 monitored villages</div></div><span className="vr-badge" style={{ color: 'var(--accent-orange)', background: 'var(--accent-orange-dim)' }}>ILLUSTRATIVE</span></div>
           <div className="vr-map">
             <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
               <defs><radialGradient id="forest"><stop offset="0" stopColor="#16482c"/><stop offset="1" stopColor="#07100c"/></radialGradient></defs>
@@ -88,7 +91,7 @@ export default function DashboardPage() {
               <text x="50" y="46" textAnchor="middle" fill="#bff5d5" fontSize="7" fontWeight="900" opacity=".16" letterSpacing="1.5">GIR</text>
             </svg>
           </div>
-          <div className="vr-legend"><span><i className="vr-dot" style={{ background: colors.HIGH }} />High risk</span><span><i className="vr-dot" style={{ background: colors.MEDIUM }} />Medium risk</span><span><i className="vr-dot" style={{ background: colors.LOW }} />Low risk</span><span style={{ marginLeft: 'auto' }}>● Live monitoring</span></div>
+          <div className="vr-legend"><span><i className="vr-dot" style={{ background: colors.HIGH }} />High risk</span><span><i className="vr-dot" style={{ background: colors.MEDIUM }} />Medium risk</span><span><i className="vr-dot" style={{ background: colors.LOW }} />Low risk</span><span style={{ marginLeft: 'auto' }}>● Landscape monitoring</span></div>
         </div>
 
         <div className="vr-card">
@@ -102,12 +105,12 @@ export default function DashboardPage() {
 
       <section className="vr-lower">
         <div className="vr-card">
-          <div className="vr-card-head"><div><div className="vr-card-title">🦁 Recent Wildlife Sightings</div><div className="vr-card-sub">Latest observations received by the platform</div></div><span className="vr-badge" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-dim)' }}>LIVE FEED</span></div>
+          <div className="vr-card-head"><div><div className="vr-card-title">🦁 Recent Wildlife Sightings</div><div className="vr-card-sub">Latest observations received by the platform</div></div><span className="vr-badge" style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-dim)' }}>SIMULATED FEED</span></div>
           <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>{data.sightings.slice(0, 6).map((x: any) => <div className="vr-sighting" key={x.id}><div className="vr-icon">🦁</div><div><div style={{ fontWeight: 700, fontSize: 12 }}>{x.species}</div><div style={{ color: 'var(--text-muted)', fontSize: 10 }}>📍 {x.village} · {x.distance_km} km</div></div><div style={{ textAlign: 'right', fontSize: 10, color: 'var(--accent-blue)' }}>{Math.round((x.confidence || 0) * 100)}%<div style={{ color: 'var(--text-muted)', marginTop: 3 }}>{ago(x.timestamp)}</div></div></div>)}</div>
         </div>
 
         <div className="vr-card">
-          <div className="vr-card-head"><div><div className="vr-card-title">🤖 AI Agent Network</div><div className="vr-card-sub">Autonomous monitoring and decision support</div></div><span className="vr-badge" style={{ color: 'var(--accent-green)', background: 'var(--accent-green-dim)' }}>SYSTEM ONLINE</span></div>
+          <div className="vr-card-head"><div><div className="vr-card-title">🤖 AI Agent Network</div><div className="vr-card-sub">Autonomous monitoring and decision support</div></div><span className="vr-badge" style={{ color: 'var(--accent-green)', background: 'var(--accent-green-dim)' }}>AGENT SIMULATION ACTIVE</span></div>
           <div className="vr-agent-grid">{data.agents.slice(0, 6).map((a: any) => { const c = a.status === 'ACTIVE' ? 'var(--accent-green)' : a.status === 'ERROR' ? 'var(--accent-red)' : a.status === 'WAITING' ? 'var(--accent-orange)' : 'var(--accent-blue)'; return <div className="vr-agent" key={a.agent_id}><div className="vr-row"><div style={{ fontSize: 11, fontWeight: 700 }}>{a.name}</div><span style={{ color: c, fontSize: 9, fontWeight: 800 }}>● {a.status}</span></div><div style={{ color: 'var(--text-muted)', fontSize: 9, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.latest_action}</div><div className="vr-progress"><div style={{ width: `${Math.round((a.confidence || 0) * 100)}%`, background: c }} /></div></div> })}</div>
         </div>
       </section>

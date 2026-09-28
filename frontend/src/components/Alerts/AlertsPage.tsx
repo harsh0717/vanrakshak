@@ -1,15 +1,22 @@
 import { useState } from 'react';
-import { getAlerts, approveAction } from '../../api/client';
+import { getAlerts, approveAction, generateAlert } from '../../api/client';
 import { useApi } from '../../hooks/useApi';
 import type { Alert, RiskLevel } from '../../types';
 import RiskBadge from '../Common/RiskBadge';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import { broadcastEmergencyAlert } from '../../utils/alertBroadcaster';
 
 type Filter = 'ALL' | RiskLevel;
 
 export default function AlertsPage() {
   const [filter, setFilter] = useState<Filter>('ALL');
   const [approving, setApproving] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedVillage, setSelectedVillage] = useState('Sasan Gir');
+  const [selectedSpecies, setSelectedSpecies] = useState('Asiatic Lion');
+  const [customDistance, setCustomDistance] = useState('0.8');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
   const { data: alerts, loading, refetch } = useApi(getAlerts, []);
 
   const filtered =
@@ -20,11 +27,27 @@ export default function AlertsPage() {
     setApproving(alert.id);
     try {
       await approveAction({
-        request_id: alert.id,
+        request_id: alert.approval_id || alert.id,
         action,
         officer_id: 'OFFICER_DEMO',
         notes: action === 'OVERRIDE' ? 'Manual override by demo officer' : undefined,
       });
+
+      // If officer approves dispatch, broadcast alert to citizen portal and villager devices
+      if (action === 'APPROVE') {
+        broadcastEmergencyAlert({
+          alert_id: alert.id,
+          village_name: alert.village,
+          species: alert.species,
+          severity: (alert.risk_level || 'HIGH') as any,
+          distance_km: alert.distance_km,
+          timestamp: new Date().toISOString(),
+          en_text: alert.message_en,
+          gu_text: alert.message_gu,
+          safety_actions: alert.safety_actions,
+        });
+      }
+
       refetch();
     } catch {
       // fallback: just refetch
@@ -34,17 +57,167 @@ export default function AlertsPage() {
     }
   }
 
+  const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+
+  async function handleCreateAndBroadcast() {
+    setIsBroadcasting(true);
+    try {
+      const vidMap: Record<string, string> = {
+        'Sasan Gir': 'VLG001',
+        'Dhari': 'VLG002',
+        'Khambha': 'VLG003',
+        'Una': 'VLG004',
+        'Rajula': 'VLG005',
+        'Talala': 'VLG006',
+        'Mendarda': 'VLG007',
+        'Kodinar': 'VLG008',
+      };
+      const vId = vidMap[selectedVillage] || 'VLG001';
+
+      // Call backend to generate alert
+      await generateAlert(vId).catch(() => null);
+
+      // Immediately broadcast to citizen portal & village nodes
+      broadcastEmergencyAlert({
+        alert_id: 'ALT-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+        village_id: vId,
+        village_name: selectedVillage,
+        species: selectedSpecies,
+        severity: 'HIGH',
+        distance_km: parseFloat(customDistance) || 0.8,
+        timestamp: new Date().toISOString(),
+        en_text: `CRITICAL ALERT: ${selectedSpecies} sighted ${customDistance} km from ${selectedVillage}. Forest patrol deployed. Villagers must move indoors immediately.`,
+        gu_text: `તાત્કાલિક સાવચેતી એલર્ટ: ${selectedVillage} પાસે ${customDistance} કિમી અંતરે ${selectedSpecies} જોવા મળ્યો છે. પશુધનને સુરક્ષિત વાડામાં રાખો.`,
+        safety_actions: [
+          'Move all livestock inside covered enclosures immediately',
+          'Do not step outside alone after dark; keep lights lit',
+          'Call Gujarat Forest Emergency Helpline 1926 immediately on sighting',
+        ],
+      });
+
+      setBroadcastSuccess(true);
+      setTimeout(() => setBroadcastSuccess(false), 3500);
+      refetch();
+    } catch (err) {
+      console.error('Failed to broadcast alert:', err);
+    } finally {
+      setIsBroadcasting(false);
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div className="page-title">⚠️ Wildlife Alerts</div>
+            <div className="page-title">⚠️ Wildlife Alerts & Early Warning</div>
             <div className="page-subtitle">
-              AI-generated bilingual alerts for village communities · Pending officer review
+              AI-generated bilingual alerts for village communities · Officer approval & citizen dispatch
             </div>
           </div>
           <span className="demo-data-label">DEMO DATA</span>
+        </div>
+      </div>
+
+      {/* Inline Broadcast Control Bar (No popup on admin side) */}
+      <div
+        className="card mb-16"
+        style={{
+          background: 'var(--surface2, #161b22)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '12px 16px',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text, #e6edf3)' }}>
+              <span>🚨</span>
+              <span>Quick Dispatch Alert to Citizen Portal</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted, #8b949e)', marginTop: 2 }}>
+              Transmits directly to villager devices. Pops up immediately on Citizen side only.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <select
+              value={selectedVillage}
+              onChange={(e) => setSelectedVillage(e.target.value)}
+              style={{
+                padding: '6px 10px',
+                background: 'var(--bg-elevated, #21262d)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                color: 'var(--text)',
+                fontSize: 12,
+              }}
+            >
+              <option value="Sasan Gir">📍 Sasan Gir</option>
+              <option value="Dhari">📍 Dhari</option>
+              <option value="Talala">📍 Talala</option>
+              <option value="Khambha">📍 Khambha</option>
+              <option value="Una">📍 Una</option>
+              <option value="Rajula">📍 Rajula</option>
+              <option value="Mendarda">📍 Mendarda</option>
+              <option value="Kodinar">📍 Kodinar</option>
+            </select>
+
+            <select
+              value={selectedSpecies}
+              onChange={(e) => setSelectedSpecies(e.target.value)}
+              style={{
+                padding: '6px 10px',
+                background: 'var(--bg-elevated, #21262d)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                color: 'var(--text)',
+                fontSize: 12,
+              }}
+            >
+              <option value="Asiatic Lion">🦁 Asiatic Lion</option>
+              <option value="Leopard">🐆 Leopard</option>
+              <option value="Hyena">🐺 Hyena</option>
+              <option value="Wild Boar">🐗 Wild Boar</option>
+            </select>
+
+            <select
+              value={customDistance}
+              onChange={(e) => setCustomDistance(e.target.value)}
+              style={{
+                padding: '6px 10px',
+                background: 'var(--bg-elevated, #21262d)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                color: 'var(--text)',
+                fontSize: 12,
+              }}
+            >
+              <option value="0.4">&lt; 0.5 km (High Risk)</option>
+              <option value="0.8">0.8 km (Village Fringe)</option>
+              <option value="1.5">1.5 km (Buffer Zone)</option>
+            </select>
+
+            <button
+              type="button"
+              disabled={isBroadcasting}
+              onClick={handleCreateAndBroadcast}
+              className="btn btn-primary"
+              style={{
+                background: broadcastSuccess ? 'var(--accent-green, #238636)' : 'var(--accent-red, #da3633)',
+                borderColor: broadcastSuccess ? 'var(--accent-green, #238636)' : '#da3633',
+                fontWeight: 700,
+                fontSize: 12,
+                padding: '6px 14px',
+              }}
+            >
+              {isBroadcasting
+                ? 'Broadcasting…'
+                : broadcastSuccess
+                ? '✓ Dispatched to Citizen Side!'
+                : '📢 Broadcast to Citizens'}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -287,20 +287,35 @@ class SightingCreateRequest(BaseModel):
     lon: float
     count: int = 1
     source: SightingSource = SightingSource.VILLAGER_REPORT
+    village_id: Optional[str] = None
     nearest_village_id: Optional[str] = None
+    distance_km: Optional[float] = None
+    time_of_day: Optional[str] = None
     notes: Optional[str] = None
+
+
+class SOSRequest(BaseModel):
+    lat: float
+    lon: float
+    village_id: Optional[str] = "VLG001"
+    species: Optional[str] = "Asiatic Lion"
+    contact: Optional[str] = "Citizen SOS"
+    message: Optional[str] = "Immediate distress reported by villager"
 
 
 class IncidentStatusUpdateRequest(BaseModel):
     new_status: IncidentStatus
-    officer_id: str
+    officer_id: str = "OFFICER_DEMO"
     notes: Optional[str] = None
 
 
 class CompensationStartRequest(BaseModel):
     incident_id: str
     claimant_name: str
-    claimant_village_id: str
+    village_id: Optional[str] = None
+    claimant_village_id: Optional[str] = None
+    contact_number: Optional[str] = None
+    species_responsible: Optional[str] = None
     loss_type: IncidentType
     loss_description: str
     estimated_loss_value: Optional[float] = None
@@ -308,15 +323,16 @@ class CompensationStartRequest(BaseModel):
 
 class OfficerApprovalRequest(BaseModel):
     approval_id: str
-    officer_id: str
-    decision: ApprovalDecision
+    officer_id: str = "OFFICER_DEMO"
+    decision: ApprovalDecision = ApprovalDecision.APPROVED
     notes: Optional[str] = None
     override_data: Optional[dict[str, Any]] = None
 
 
 class AlertGenerateRequest(BaseModel):
-    sighting_id: str
-    village_id: str
+    sighting_id: Optional[str] = None
+    village_id: Optional[str] = None
+    incident_id: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

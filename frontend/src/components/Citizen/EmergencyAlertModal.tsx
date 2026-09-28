@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 
 export interface EmergencyAlertData {
   alert_id?: string;
@@ -14,6 +15,9 @@ export interface EmergencyAlertData {
 }
 
 export default function EmergencyAlertModal() {
+  const location = useLocation();
+  const isCitizen = location.pathname.includes('/citizen');
+
   const [isOpen, setIsOpen] = useState(false);
   const [alertData, setAlertData] = useState<EmergencyAlertData | null>(null);
   const [isSirenActive, setIsSirenActive] = useState(false);
@@ -21,6 +25,7 @@ export default function EmergencyAlertModal() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const oscRef = useRef<OscillatorNode | null>(null);
   const intervalRef = useRef<any>(null);
+  const toastTimeoutRef = useRef<any>(null);
 
   const stopSiren = () => {
     setIsSirenActive(false);
@@ -102,6 +107,13 @@ export default function EmergencyAlertModal() {
   };
 
   const triggerAlert = (data: EmergencyAlertData, playSound = true) => {
+    // STRICT: Only activate modal and siren on the Citizen portal (/citizen).
+    // Absolutely NO popup or modal will ever appear on the Admin side.
+    const onCitizenPortal = window.location.pathname.includes('/citizen');
+    if (!onCitizenPortal) {
+      return;
+    }
+
     setAlertData(data);
     setIsOpen(true);
     if (playSound) {
@@ -138,14 +150,26 @@ export default function EmergencyAlertModal() {
     };
     window.addEventListener('storage', onStorage);
 
+    const onLocalEvent = (e: any) => {
+      if (e?.detail) {
+        triggerAlert(e.detail, true);
+      }
+    };
+    window.addEventListener('vanrakshak_local_emergency_alert', onLocalEvent);
+
     return () => {
       stopSiren();
       if (channel) channel.close();
       window.removeEventListener('storage', onStorage);
+      window.removeEventListener('vanrakshak_local_emergency_alert', onLocalEvent);
     };
   }, []);
 
-  if (!isOpen || !alertData) return null;
+  // If not on the Citizen Portal (/citizen), return null.
+  // Under NO circumstances does any popup, modal, or toast appear on the Admin side.
+  if (!isCitizen || !isOpen || !alertData) {
+    return null;
+  }
 
   const species = alertData.species || 'Asiatic Lion';
   const village = alertData.village_name || alertData.village_id || 'Sasan Gir';

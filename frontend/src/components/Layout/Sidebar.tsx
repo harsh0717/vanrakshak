@@ -70,6 +70,16 @@ export default function Sidebar() {
         </select>
       </div>
 
+      {/* User Account */}
+      <div style={{ padding: '8px 12px', margin: '4px 12px 10px', background: 'var(--bg-elevated, #161b22)', borderRadius: 6, border: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Account Profile</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+          <span style={{ fontSize: 13 }}>👤</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue, #79c0ff)' }}>ADMIN</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 'auto' }}>Gir Control</span>
+        </div>
+      </div>
+
       {/* System status */}
       <div className="sidebar-status">
         <div className="status-dot online" />

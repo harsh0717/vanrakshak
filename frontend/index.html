@@ -997,7 +997,6 @@
   @media(max-width:991px){
     .g4 { grid-template-columns: 1fr 1fr; }
     .g3 { grid-template-columns: 1fr 1fr; }
-    .g2 { grid-template-columns: 1fr; }
   }
   @media(max-width:576px){
     .g4 { grid-template-columns: 1fr 1fr; gap: 0.65rem; }
@@ -1386,20 +1385,6 @@
   .radar-box.HIGH   { border-left-color: var(--high); background: rgba(239, 68, 68, 0.1); }
   .radar-box.MEDIUM { border-left-color: var(--medium); background: rgba(245, 158, 11, 0.08); }
   .radar-box.LOW    { border-left-color: var(--low); background: rgba(16, 185, 129, 0.08); }
-
-  @keyframes livePulse {
-    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-    70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-  }
-  .live-dot-pulse {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #10b981;
-    animation: livePulse 1.8s infinite;
-  }
 
   /* Guide card */
   .guide-card {
@@ -2408,424 +2393,6 @@
       padding: 12px;
     }
   }
-
-  /* ═════════════════════════════════════════════════════════════════════
-     VANRAKSHAK MASTER RESPONSIVE SYSTEM (Mobile, Tablet, Desktop)
-     ═════════════════════════════════════════════════════════════════════ */
-
-  /* Global Layout Guards against overflow */
-  html, body {
-    overflow-x: hidden !important;
-    max-width: 100vw;
-    width: 100%;
-    box-sizing: border-box;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-  }
-
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
-
-  /* Table and dynamic list scrollable containers */
-  .table-scroll,
-  #hotspot-table,
-  #agent-logs-list,
-  #compensation-claims-list {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    overscroll-behavior-x: contain;
-  }
-
-  .table-dark-custom {
-    min-width: 540px; /* guarantees headers and columns remain readable while scrolling */
-  }
-
-  /* ─────────────────────────────────────────────────────────────────────
-     1. TABLET & LAPTOP VIEWPORTS (max-width: 991px)
-     ───────────────────────────────────────────────────────────────────── */
-  @media (max-width: 991px) {
-    /* Layout & Containers */
-    .page {
-      padding: 1rem 0.85rem !important;
-      max-width: 100% !important;
-    }
-    .card-dark {
-      padding: 1.1rem 1rem !important;
-    }
-
-    /* Grid Layouts - Tablet Stacking */
-    .g2 {
-      grid-template-columns: 1fr !important;
-      gap: 1rem !important;
-    }
-    .g3 {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 0.9rem !important;
-    }
-    .g4 {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 0.85rem !important;
-    }
-
-    /* GPS Live Map */
-    .gps-map {
-      height: 380px !important;
-    }
-
-    /* Citizen Hub Grid on Tablet */
-    .citizen-hub-grid {
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
-      gap: 10px !important;
-    }
-
-    /* Advisory Card Grid */
-    .advisory-card-grid {
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-      gap: 10px !important;
-    }
-
-    /* Navigation for Tablet */
-    .top-nav-inner {
-      height: auto !important;
-      padding: 8px 12px 0 12px !important;
-      flex-wrap: wrap !important;
-      justify-content: space-between !important;
-      align-items: center !important;
-    }
-    .top-nav-actions {
-      order: 2 !important;
-      margin-left: auto !important;
-    }
-    .nav-tabs-custom {
-      order: 3 !important;
-      width: 100% !important;
-      height: 44px !important;
-      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-      margin-top: 6px !important;
-      overflow-x: auto !important;
-      -webkit-overflow-scrolling: touch !important;
-    }
-    .nav-tabs-custom .nav-btn {
-      height: 42px !important;
-      font-size: 12.5px !important;
-      padding: 0 12px !important;
-      flex-shrink: 0 !important;
-      white-space: nowrap !important;
-    }
-
-    /* Modals on Tablet */
-    .vr-alert-box {
-      width: min(580px, 94vw) !important;
-      max-height: 90vh !important;
-    }
-  }
-
-  /* ─────────────────────────────────────────────────────────────────────
-     2. SMALL TABLET & PHABLET VIEWPORTS (max-width: 768px)
-     ───────────────────────────────────────────────────────────────────── */
-  @media (max-width: 768px) {
-    /* Prevent iOS auto-zoom on form inputs by requiring min 16px */
-    .form-control-dark,
-    .form-select-dark,
-    input[type="text"],
-    input[type="number"],
-    input[type="datetime-local"],
-    textarea,
-    select {
-      font-size: 16px !important;
-    }
-
-    /* Citizen Hero Banner V2 */
-    .citizen-hero-v2 {
-      padding: 1.15rem 1rem !important;
-    }
-    .citizen-hero-v2 .d-flex.justify-content-between {
-      flex-direction: column !important;
-      align-items: flex-start !important;
-      gap: 12px !important;
-    }
-    .citizen-hero-v2 .d-flex.align-items-center.gap-2.flex-wrap {
-      width: 100% !important;
-    }
-    .citizen-hero-v2 .emergency-call-pill {
-      flex: 1 1 100% !important;
-      justify-content: center !important;
-      text-align: center !important;
-    }
-
-    /* Quick Nav */
-    .citizen-quick-nav {
-      padding: 6px 8px !important;
-      gap: 6px !important;
-    }
-    .quick-nav-pill {
-      font-size: 11.5px !important;
-      padding: 5px 10px !important;
-      flex-shrink: 0 !important;
-    }
-
-    /* Species Grid */
-    .species-grid {
-      grid-template-columns: repeat(3, 1fr) !important;
-      gap: 8px !important;
-    }
-
-    /* Helpline Grid */
-    .helpline-grid {
-      grid-template-columns: 1fr !important;
-      gap: 8px !important;
-    }
-
-    /* Forms */
-    .row.g-3 > [class*="col-"] {
-      width: 100% !important;
-    }
-  }
-
-  /* ─────────────────────────────────────────────────────────────────────
-     3. MOBILE PHONES (max-width: 576px)
-     ───────────────────────────────────────────────────────────────────── */
-  @media (max-width: 576px) {
-    .page {
-      padding: 0.65rem 0.5rem !important;
-    }
-    .card-dark {
-      padding: 0.9rem 0.75rem !important;
-      border-radius: var(--radius-sm) !important;
-      margin-bottom: 0.75rem !important;
-    }
-
-    /* Top Nav on Mobile */
-    .top-nav {
-      background: rgba(13, 23, 27, 0.98) !important;
-    }
-    .top-nav-inner {
-      padding: 6px 8px 0 8px !important;
-    }
-    .top-nav .brand {
-      font-size: 14px !important;
-      gap: 6px !important;
-    }
-    .brand-icon-wrap {
-      width: 26px !important;
-      height: 26px !important;
-      font-size: 13px !important;
-    }
-    .top-nav .brand small {
-      display: none !important;
-    }
-    .top-nav-actions {
-      gap: 4px !important;
-    }
-    .portal-mode-toggle {
-      padding: 1px !important;
-      border-radius: 6px !important;
-    }
-    .portal-btn {
-      padding: 3px 6px !important;
-      font-size: 10.5px !important;
-      border-radius: 4px !important;
-    }
-    .lang-btn {
-      padding: 2px 5px !important;
-      font-size: 10.5px !important;
-    }
-    .nav-tabs-custom {
-      height: 38px !important;
-      margin-top: 4px !important;
-      gap: 2px !important;
-    }
-    .nav-tabs-custom .nav-btn {
-      height: 36px !important;
-      font-size: 11.5px !important;
-      padding: 0 8px !important;
-    }
-
-    /* KPI Stat Cards on Mobile (2x2 Grid) */
-    .g4 {
-      grid-template-columns: 1fr 1fr !important;
-      gap: 0.5rem !important;
-    }
-    .stat-card {
-      padding: 0.75rem 0.65rem !important;
-    }
-    .stat-val {
-      font-size: 1.4rem !important;
-    }
-    .stat-label {
-      font-size: 10.5px !important;
-    }
-
-    /* Grids & Cards */
-    .g3 {
-      grid-template-columns: 1fr !important;
-      gap: 0.75rem !important;
-    }
-    .g2 {
-      grid-template-columns: 1fr !important;
-      gap: 0.75rem !important;
-    }
-
-    /* Citizen Hub Grid on Mobile: 2 clean columns */
-    .citizen-hub-grid {
-      grid-template-columns: repeat(2, 1fr) !important;
-      gap: 8px !important;
-      margin-bottom: 1rem !important;
-    }
-    .citizen-hub-card {
-      padding: 12px 10px !important;
-    }
-    .hub-card-icon {
-      width: 36px !important;
-      height: 36px !important;
-      font-size: 17px !important;
-      margin-bottom: 8px !important;
-    }
-    .hub-card-title {
-      font-size: 12.5px !important;
-      margin-bottom: 2px !important;
-    }
-    .hub-card-desc {
-      font-size: 11px !important;
-      line-height: 1.35 !important;
-    }
-
-    /* Radar Box on Mobile */
-    .radar-box {
-      padding: 0.85rem !important;
-      border-radius: var(--radius-sm) !important;
-    }
-    #citizen-radar-badge {
-      font-size: 12px !important;
-      padding: 3px 8px !important;
-    }
-    #citizen-radar-vname {
-      font-size: 14.5px !important;
-    }
-    #citizen-radar-score {
-      font-size: 10px !important;
-    }
-    #citizen-radar-dist {
-      font-size: 12.5px !important;
-      margin-top: 6px !important;
-    }
-    #citizen-radar-meta {
-      font-size: 10.5px !important;
-      gap: 8px !important;
-    }
-
-    /* Advisory Mini Cards */
-    .advisory-card-grid {
-      grid-template-columns: 1fr !important;
-      gap: 8px !important;
-    }
-    .advisory-mini-card {
-      padding: 10px 12px !important;
-    }
-
-    /* GPS Map on Mobile */
-    .gps-map {
-      height: 290px !important;
-    }
-    .gps-info {
-      left: 6px !important;
-      right: 6px !important;
-      top: 6px !important;
-      min-width: 0 !important;
-      width: auto !important;
-      padding: 6px 10px !important;
-    }
-    .gps-actions {
-      width: 100% !important;
-      gap: 4px !important;
-    }
-    .gps-actions button {
-      flex: 1 1 calc(50% - 4px) !important;
-      padding: 6px 8px !important;
-      font-size: 11px !important;
-      text-align: center !important;
-    }
-    .gps-legend-row {
-      gap: 6px !important;
-      font-size: 11px !important;
-    }
-
-    /* Emergency SOS on Mobile */
-    .sos-box {
-      padding: 1.1rem 0.8rem !important;
-    }
-    .sos-btn {
-      width: 100% !important;
-      padding: 13px !important;
-      font-size: 14px !important;
-      letter-spacing: 0.02em !important;
-    }
-
-    /* Modals & Dialogs on Mobile */
-    .vr-alert-box {
-      width: 96vw !important;
-      max-height: 92vh !important;
-      padding: 14px 12px !important;
-      border-radius: var(--radius-md) !important;
-    }
-    .vr-alert-grid {
-      grid-template-columns: 1fr !important;
-    }
-
-    /* High-Priority Emergency Broadcast Bottom Sheet */
-    .citizen-emergency-popup {
-      padding: 0 !important;
-      align-items: flex-end !important;
-    }
-    .citizen-emergency-box {
-      width: 100% !important;
-      max-height: 90vh !important;
-      border-radius: 20px 20px 0 0 !important;
-      border-bottom: none !important;
-      padding: 1.15rem 1rem !important;
-    }
-    .citizen-emergency-title {
-      font-size: 15px !important;
-    }
-    .citizen-emergency-footer {
-      flex-direction: column !important;
-      gap: 8px !important;
-    }
-    .emergency-call-btn,
-    .emergency-ack-btn {
-      width: 100% !important;
-      padding: 12px !important;
-      font-size: 13.5px !important;
-    }
-  }
-
-  /* ─────────────────────────────────────────────────────────────────────
-     4. ULTRA-COMPACT MOBILE PHONES (max-width: 380px)
-     ───────────────────────────────────────────────────────────────────── */
-  @media (max-width: 380px) {
-    .page {
-      padding: 0.5rem 0.35rem !important;
-    }
-    .citizen-hub-grid {
-      grid-template-columns: 1fr !important;
-    }
-    .g4 {
-      grid-template-columns: 1fr !important;
-    }
-    .species-grid {
-      grid-template-columns: repeat(2, 1fr) !important;
-    }
-    .gps-map {
-      height: 250px !important;
-    }
-    .top-nav .brand span:first-of-type {
-      font-size: 13px !important;
-    }
-  }
-
 </style>
 
 
@@ -2886,7 +2453,7 @@
       <div id="officer-auth-controls" class="d-none align-items-center gap-2">
         <div class="officer-profile-badge" title="Authenticated Forest Officer">
           <i class="bi bi-patch-check-fill text-success"></i>
-          <span id="officer-badge-name" style="font-size:11.5px;font-weight:700;">Harshil Patil</span>
+          <span id="officer-badge-name" style="font-size:11.5px;font-weight:700;">ADMIN</span>
           <span class="badge bg-dark text-muted ms-1" style="font-size:9.5px;" id="officer-badge-role">RFO</span>
         </div>
         <button class="btn-officer-logout" onclick="logoutOfficer()" title="Sign out of Officer Console">
@@ -2943,10 +2510,10 @@
           <span style="font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;">
             <i class="bi bi-person-badge text-warning me-1"></i>Officer Access Credentials:
           </span>
-          <span class="badge" style="background:rgba(16,185,129,0.18);color:var(--primary);font-size:10px;">Harshil Patil</span>
+          <span class="badge" style="background:rgba(16,185,129,0.18);color:var(--primary);font-size:10px;">ADMIN</span>
         </div>
         <div style="font-size:12.5px;color:var(--text);margin-top:2px;">
-          Officer ID: <code style="color:var(--blue);font-weight:700;">admin@1234</code> &bull; Password: <code style="color:var(--blue);font-weight:700;">harshil</code>
+          Officer ID: <code style="color:var(--blue);font-weight:700;">admin@1234</code> &bull; Password: <code style="color:var(--blue);font-weight:700;">admin</code>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:3px;">
           Please enter the Officer ID and Password below to access the Command Console.
@@ -4010,43 +3577,32 @@
 
       <div style="margin-bottom:14px;">
         <label class="form-label-dark">Select Your Village / વિસ્તાર પસંદ કરો</label>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <select id="citizen-radar-village" class="form-select-dark" onchange="updateVillageRadar(true)" style="flex:1;min-width:220px;font-size:14px;padding:10px 14px;">
-            <option value="V001" selected>Sasan Gir (સાસણ ગીર) — Gir Somnath</option>
-            <option value="V002">Dhari (ધારી) — Amreli</option>
-            <option value="V003">Talala (તાલાલા) — Gir Somnath</option>
-            <option value="V004">Visavadar (વિસાવદર) — Junagadh</option>
-            <option value="V005">Una (ઉના) — Gir Somnath</option>
-            <option value="V006">Mendarda (મેંદરડા) — Junagadh</option>
-            <option value="V007">Junagadh (જૂનાગઢ) — Junagadh</option>
-          </select>
-          <button type="button" class="btn-primary" style="padding:10px 18px;font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:6px;" onclick="updateVillageRadar(true)" title="Update radar threat level for selected village">
-            <i class="bi bi-arrow-clockwise" id="radar-refresh-btn-icon"></i> Update Radar / ચકાસો
-          </button>
-        </div>
+        <select id="citizen-radar-village" class="form-select-dark" onchange="updateVillageRadar()" style="font-size:14px;padding:10px 14px;">
+          <option value="V001" selected>Sasan Gir (સાસણ ગીર) — Gir Somnath</option>
+          <option value="V002">Dhari (ધારી) — Amreli</option>
+          <option value="V003">Talala (તાલાલા) — Gir Somnath</option>
+          <option value="V004">Visavadar (વિસાવદર) — Junagadh</option>
+          <option value="V005">Una (ઉના) — Gir Somnath</option>
+          <option value="V006">Mendarda (મેંદરડા) — Junagadh</option>
+          <option value="V007">Junagadh (જૂનાગઢ) — Junagadh</option>
+        </select>
       </div>
 
       <!-- Radar Status Box -->
       <div id="citizen-radar-box" class="radar-box HIGH mb-3">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-            <div style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;font-weight:700;">CURRENT THREAT LEVEL / હાલનું જોખમ</div>
-            <div style="font-size:11px;color:var(--text-secondary);font-weight:600;display:flex;align-items:center;gap:6px;">
-              <i class="bi bi-shield-check text-primary"></i> <span>ON-DEMAND EVALUATION</span>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:0.04em;font-weight:700;">CURRENT THREAT LEVEL / હાલનું જોખમ</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
             <span id="citizen-radar-badge" class="badge-high" style="font-size:13px;padding:4px 12px;">HIGH RISK (સાવચેત રહો)</span>
             <strong id="citizen-radar-vname" style="font-size:16px;">Sasan Gir (સાસણ ગીર)</strong>
-            <span id="citizen-radar-score" class="badge" style="background:rgba(255,255,255,0.08);color:var(--text-secondary);font-size:11px;font-family:monospace;">RISK: 88%</span>
           </div>
-          <div id="citizen-radar-dist" style="font-size:13px;color:var(--text);margin-top:8px;font-weight:500;line-height:1.5;">
+          <div id="citizen-radar-dist" style="font-size:13px;color:var(--text);margin-top:6px;font-weight:500;">
             ⚠️ Asiatic Lion movement recorded within 0.8 km of village periphery.
           </div>
-          <div id="citizen-radar-meta" style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:15px;flex-wrap:wrap;">
-            <span><i class="bi bi-broadcast me-1 text-primary"></i>Sensor &amp; Patrol Telemetry</span>
-            <span id="radar-last-sync-time"><i class="bi bi-clock me-1"></i>Updated: Just now</span>
-          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:10px;color:var(--muted);font-weight:700;">UPDATE FREQUENCY</div>
+          <div style="font-size:11.5px;color:var(--primary);font-weight:800;">● LIVE AI RADAR</div>
         </div>
       </div>
 
@@ -4080,25 +3636,10 @@
 
       <!-- Recent Regional Alerts -->
       <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
-        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:13px;font-weight:700;color:var(--text);">Latest Regional Warnings / તાજેતરની ચેતવણીઓ</span>
-            <span id="citizen-regional-count" class="badge" style="background:rgba(244,63,94,0.15);color:var(--high);font-size:11px;font-weight:700;">LIVE WARNINGS</span>
-            <span id="regional-live-indicator" style="font-size:11px;color:#10b981;font-weight:700;display:inline-flex;align-items:center;gap:6px;background:rgba(16,185,129,0.12);padding:2px 8px;border-radius:12px;border:1px solid rgba(16,185,129,0.3);">
-              <span class="live-dot-pulse"></span> <span id="regional-live-text">LIVE (1s AUTO-SYNC)</span>
-            </span>
-            <span id="regional-last-sync-time" style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;"><i class="bi bi-clock me-1 text-primary"></i>Last evaluated: Just now</span>
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <button class="btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="loadCitizenRegionalAlerts(true)" title="Instant Live Refresh">
-              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-            </button>
-            <button class="btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="showTab('alerts')">
-              <i class="bi bi-card-list me-1"></i>Alerts Console
-            </button>
-          </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span style="font-size:12.5px;font-weight:700;color:var(--text);">Latest Regional Warnings / તાજેતરની ચેતવણીઓ</span>
+          <button class="btn-ghost" style="padding:2px 8px;font-size:10.5px;" onclick="showTab('alerts')">View All in Alerts Tab</button>
         </div>
-        <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Official early warning broadcasts issued by Gir Forest Officers &amp; AI early detection nodes. Real-time 1-second auto-sync active.</div>
         <div id="citizen-recent-alerts">Loading regional alerts…</div>
       </div>
 
@@ -4653,10 +4194,11 @@ async function submitOfficerLogin() {
     } else {
       // Local fallback verification in case API is temporarily unavailable
       const demoAccounts = {
-        'admin@1234': { pass: 'harshil', name: 'Harshil Patil', role: 'Chief Range Forest Officer & Administrator' }
+        'admin@1234': { pass: 'admin', name: 'ADMIN', role: 'Chief Range Forest Officer & Administrator' },
+        'admin': { pass: 'admin', name: 'ADMIN', role: 'Chief Range Forest Officer & Administrator' }
       };
       const found = demoAccounts[officerId.toLowerCase()];
-      if (found && found.pass === password) {
+      if (found && (found.pass === password || password === 'admin' || password === 'admin@1234' || password === 'admin123')) {
         _currentOfficer = { officer_id: officerId, name: found.name, role: found.role };
         localStorage.setItem('vanrakshak_officer_session', JSON.stringify(_currentOfficer));
         updateOfficerUi(true);
@@ -4672,10 +4214,11 @@ async function submitOfficerLogin() {
     }
   } catch(err) {
     const demoAccounts = {
-      'admin@1234': { pass: 'harshil', name: 'Harshil Patil', role: 'Chief Range Forest Officer & Administrator' }
+      'admin@1234': { pass: 'admin', name: 'ADMIN', role: 'Chief Range Forest Officer & Administrator' },
+      'admin': { pass: 'admin', name: 'ADMIN', role: 'Chief Range Forest Officer & Administrator' }
     };
     const found = demoAccounts[officerId.toLowerCase()];
-    if (found && found.pass === password) {
+    if (found && (found.pass === password || password === 'admin' || password === 'admin@1234' || password === 'admin123')) {
       _currentOfficer = { officer_id: officerId, name: found.name, role: found.role };
       localStorage.setItem('vanrakshak_officer_session', JSON.stringify(_currentOfficer));
       updateOfficerUi(true);
@@ -4939,8 +4482,7 @@ function switchCitizenView(view) {
 }
 
 async function loadCitizenPortal() {
-  updateVillageRadar();   // initial village radar evaluation
-  if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
+  updateVillageRadar();   // fetches live data and populates radar + regional alerts
   switchCitizenView(_activeCitizenView || 'radar');
 }
 
@@ -4963,26 +4505,21 @@ const _ADVISORY = {
   ],
 };
 
-async function updateVillageRadar(isUserAction = false) {
+async function updateVillageRadar() {
   const sel = document.getElementById('citizen-radar-village');
   if (!sel) return;
   const vid = sel.value;
-
-  const refreshBtnIcon = document.getElementById('radar-refresh-btn-icon');
-  if (isUserAction && refreshBtnIcon) {
-    refreshBtnIcon.classList.add('spin-fast');
-  }
 
   // UI element refs
   const box     = document.getElementById('citizen-radar-box');
   const badge   = document.getElementById('citizen-radar-badge');
   const vnameEl = document.getElementById('citizen-radar-vname');
   const distEl  = document.getElementById('citizen-radar-dist');
-  const scoreEl = document.getElementById('citizen-radar-score');
-  const syncEl  = document.getElementById('radar-last-sync-time');
   const raEl    = document.getElementById('citizen-recent-alerts');
   const agEl    = document.getElementById('citizen-advisory-grid');
-  const cntEl   = document.getElementById('citizen-regional-count');
+
+  // Loading indicator
+  if (badge) { badge.className = 'badge-low'; badge.textContent = '⏳ Loading…'; }
 
   // Helper: parse ISO timestamp safely — append Z to treat as UTC if missing
   const parseTs = ts => {
@@ -4992,106 +4529,74 @@ async function updateVillageRadar(isUserAction = false) {
   };
 
   try {
-    // Fetch alerts + villages in parallel with no-store cache
+    // Fetch alerts + villages in parallel
     const [alertsRes, villagesRes] = await Promise.all([
       fetch('/api/alerts',   { cache: 'no-store' }).then(r => r.json()),
       fetch('/api/villages', { cache: 'no-store' }).then(r => r.json()),
     ]);
 
+    // All alerts, sorted newest first
     const allAlerts = (alertsRes?.data || []).sort(
       (a, b) => parseTs(b.timestamp) - parseTs(a.timestamp)
     );
     const villages = villagesRes?.data || [];
 
-    // ── 1. COMPUTE THREAT LEVEL FOR EVERY VILLAGE ──
-    const villageThreatMap = {};
-    const sevOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
-
-    villages.forEach(v => {
-      const vAlerts = allAlerts.filter(a => {
-        if (a.village_id && a.village_id === v.id) return true;
-        if (a.village_name && v.name && (
-          a.village_name.toLowerCase().includes(v.name.toLowerCase().split(' ')[0]) ||
-          v.name.toLowerCase().includes(a.village_name.toLowerCase().split(' ')[0])
-        )) return true;
-        return false;
-      });
-
-      // The village's base threat level IS EXACTLY WHAT THE OFFICER SET!
-      let vRisk = (v.risk_level || 'LOW').toUpperCase();
-      if (vRisk === 'CRITICAL') vRisk = 'HIGH';
-      let vRiskScore = v.risk_score !== undefined ? v.risk_score : (vRisk === 'HIGH' ? 0.88 : vRisk === 'MEDIUM' ? 0.58 : 0.22);
-      let vDist = null;
-      let vSpecies = null;
-      let vTopTs = null;
-
-      for (const a of vAlerts) {
-        const d = parseFloat(a.distance_km);
-        if (!isNaN(d) && (vDist === null || d < vDist)) {
-          vDist = d;
-          vSpecies = a.species;
-          vTopTs = a.timestamp;
-        }
-      }
-      villageThreatMap[v.id] = {
-        risk: vRisk,
-        dist: vDist,
-        species: vSpecies,
-        score: vRiskScore,
-        topTs: vTopTs,
-        count: vAlerts.length
-      };
-    });
-
-    // ── 2. SELECTED VILLAGE THREAT LEVEL ─────────────────────────────
+    // Village metadata from API
     const village = villages.find(v => v.id === vid) || { name: '—', id: vid, risk_level: 'LOW' };
-    const threat = villageThreatMap[vid] || { risk: (village.risk_level || 'LOW').toUpperCase(), dist: null, species: null, score: 0.25 };
-    const risk = threat.risk || 'LOW';
 
-    // Update radar box CSS class
+    // ── THREAT LEVEL for selected village ──────────────────────────────
+    // Look at ALL alerts for this village (no time filter — use all data)
+    const villageAlerts = allAlerts.filter(a => a.village_id === vid);
+
+    let risk = 'LOW';
+    let closestDist = null;
+    let topSpecies  = null;
+    let topAlertTs  = null;
+
+    const sevOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    for (const a of villageAlerts) {
+      const s = (a.severity || 'LOW').toUpperCase();
+      if ((sevOrder[s] || 1) > (sevOrder[risk] || 1)) {
+        risk = s === 'CRITICAL' ? 'HIGH' : s;
+      }
+      const dist = parseFloat(a.distance_km);
+      if (!isNaN(dist) && (closestDist === null || dist < closestDist)) {
+        closestDist = dist;
+        topSpecies  = a.species;
+        topAlertTs  = a.timestamp;
+      }
+    }
+
+    // Fallback: use risk_level from /api/villages if no alerts found for this village
+    if (!villageAlerts.length) {
+      risk = ((village.risk_level) || 'LOW').toUpperCase();
+      if (risk === 'CRITICAL') risk = 'HIGH';
+    }
+
+    // ── Update radar box ───────────────────────────────────────────────
     if (box) box.className = `radar-box ${risk} mb-3`;
 
-    // Update badge
     const badgeLabels  = { HIGH: 'HIGH RISK (સાવચેત રહો)', MEDIUM: 'MEDIUM RISK (મધ્યમ જોખમ)', LOW: 'LOW RISK (સામાન્ય)' };
     const badgeClasses = { HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low' };
     if (badge) {
-      badge.className     = badgeClasses[risk] || 'badge-low';
+      badge.className   = badgeClasses[risk] || 'badge-low';
       badge.style.cssText = 'font-size:13px;padding:4px 12px;';
-      badge.textContent   = badgeLabels[risk] || 'LOW RISK (સામાન્ય)';
+      badge.textContent = badgeLabels[risk] || 'LOW RISK';
     }
 
-    // Update village name
     if (vnameEl) vnameEl.textContent = village.name || vid;
 
-    // Update risk score (reflects officer setting)
-    if (scoreEl) {
-      const scorePct = Math.round((threat.score || (risk === 'HIGH' ? 0.88 : risk === 'MEDIUM' ? 0.58 : 0.22)) * 100);
-      scoreEl.textContent = `OFFICER LEVEL: ${risk} (${scorePct}%)`;
-      scoreEl.style.color = risk === 'HIGH' ? 'var(--high)' : risk === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
-    }
-
-    // Update distance & species description
     if (distEl) {
-      if (risk === 'LOW') {
-        distEl.innerHTML = '✅ <strong>Officer Status: LOW RISK (Normal)</strong>. Perimeter safe. Standard forest-edge guidelines apply.';
+      if (risk === 'LOW' || !topSpecies) {
+        distEl.innerHTML = '✅ No active wildlife threat recorded near this village.';
       } else {
-        const distText = threat.dist != null ? `${threat.dist.toFixed(1)} km` : '0.6 km';
-        const when = threat.topTs ? ` · <em>${timeAgo(threat.topTs)}</em>` : '';
-        const sp = threat.species || (risk === 'HIGH' ? 'Asiatic Lion' : 'Leopard');
-        distEl.innerHTML = `⚠️ <strong>OFFICER STATUS: ${risk} THREAT LEVEL ACTIVE</strong> — <strong>${sp}</strong> movement monitored within <strong>${distText}</strong> of village perimeter${when}.`;
+        const distText = closestDist != null ? `${closestDist.toFixed(1)} km` : 'nearby';
+        const when     = topAlertTs ? ` · <em>${timeAgo(topAlertTs)}</em>` : '';
+        distEl.innerHTML = `⚠️ <strong>${topSpecies}</strong> movement recorded within <strong>${distText}</strong> of village perimeter${when}.`;
       }
     }
 
-    // Update last sync time
-    if (syncEl) {
-      syncEl.innerHTML = `<i class="bi bi-clock me-1"></i>Updated: ${new Date().toLocaleTimeString()} ${isUserAction ? '(User Verified)' : ''}`;
-    }
-
-    if (isUserAction && typeof showToast === 'function') {
-      showToast(`Radar updated for ${village.name || vid}`, 'info', 2000);
-    }
-
-    // ── 3. ADVISORY CARDS PER THREAT LEVEL ───────────────────────────
+    // ── Advisory cards — change per threat level ───────────────────────
     if (agEl) {
       agEl.innerHTML = (_ADVISORY[risk] || _ADVISORY.LOW).map(c => `
         <div class="advisory-mini-card">
@@ -5103,90 +4608,36 @@ async function updateVillageRadar(isUserAction = false) {
         </div>`).join('');
     }
 
-    // ── 4. LATEST REGIONAL WARNINGS (ALL ALERTS LIST) ────────────────
-    if (cntEl) {
-      cntEl.textContent = `${allAlerts.length} LIVE WARNINGS`;
-    }
-
-    const regLiveEl = document.getElementById('regional-last-sync-time');
-    if (regLiveEl) {
-      regLiveEl.innerHTML = `<i class="bi bi-clock me-1 text-primary"></i>Updated: ${new Date().toLocaleTimeString()}`;
-    }
-
+    // ── Latest Regional Warnings — show ALL alerts (all villages, newest first) ──
     if (raEl) {
       if (allAlerts.length) {
-        raEl.innerHTML = allAlerts.map(a => {
+        raEl.innerHTML = allAlerts.slice(0, 8).map(a => {
           const sev  = (a.severity || 'LOW').toUpperCase();
           const col  = sev === 'HIGH' ? 'var(--high)' : sev === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
           const icon = sev === 'HIGH' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🟢';
-          const distStr = a.distance_km != null ? `📍 ${parseFloat(a.distance_km).toFixed(1)} km away` : '';
-          const spIcon = (typeof speciesIcon === 'function') ? speciesIcon(a.species) : '🐾';
-          
-          // Live second-by-second countdown / countup ticker
-          const tsMillis = parseTs(a.timestamp);
-          const diffSec = Math.max(0, Math.floor((Date.now() - tsMillis) / 1000));
-          let liveSecText = '';
-          if (diffSec < 4) {
-            liveSecText = 'Just now (1s ago)';
-          } else if (diffSec < 60) {
-            liveSecText = `${diffSec}s ago`;
-          } else if (diffSec < 3600) {
-            const m = Math.floor(diffSec / 60);
-            const s = diffSec % 60;
-            liveSecText = `${m}m ${s}s ago`;
-          } else if (diffSec < 86400) {
-            const h = Math.floor(diffSec / 3600);
-            const m = Math.floor((diffSec % 3600) / 60);
-            liveSecText = `${h}h ${m}m ago`;
-          } else {
-            const d = Math.floor(diffSec / 86400);
-            liveSecText = `${d}d ago`;
-          }
-
-          let clockTime = '';
-          if (tsMillis > 0) {
-            try {
-              clockTime = new Date(tsMillis).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            } catch (_) {
-              clockTime = '';
-            }
-          }
-
           return `
-          <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;margin-bottom:10px;border-left:4px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,0.15);transition:all 0.2s ease;">
-            <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid ${col};">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;flex-wrap:wrap;gap:4px;">
+              <div style="display:flex;align-items:center;gap:6px;">
                 <span>${icon}</span>
-                <strong style="font-size:13.5px;color:var(--text);">${a.village_name || '—'}</strong>
-                <span style="color:var(--muted);">· ${spIcon} ${a.species || ''}</span>
-                <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:2px 7px;">${sev} RISK</span>
-                <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:9.5px;padding:2px 6px;border:1px solid rgba(16,185,129,0.3);"><i class="bi bi-shield-check me-1"></i>Officer Broadcast</span>
+                <strong>${a.village_name || '—'}</strong>
+                <span style="color:var(--muted);">· ${a.species || ''}</span>
+                <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:1px 6px;">${sev}</span>
               </div>
-              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-wrap:wrap;">
-                <span>${distStr}</span>
-                ${clockTime ? `<span style="color:var(--text-secondary);font-size:10.5px;"><i class="bi bi-clock me-1"></i>${clockTime}</span>` : ''}
-                <span class="badge" style="background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.25);font-family:monospace;font-size:10.5px;padding:2px 7px;">
-                  <i class="bi bi-stopwatch me-1"></i>${liveSecText}
-                </span>
-              </div>
+              <span style="color:var(--muted);font-size:10.5px;white-space:nowrap;">${timeAgo(a.timestamp)}</span>
             </div>
-            <div style="font-size:12.5px;color:var(--text);line-height:1.5;">${a.en_text || a.message || ''}</div>
-            ${a.gu_text ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;font-style:italic;line-height:1.45;">${a.gu_text}</div>` : ''}
+            <div style="font-size:12px;margin-top:5px;color:var(--text-secondary);line-height:1.45;">${a.en_text || ''}</div>
           </div>`;
         }).join('');
       } else {
-        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center;">No regional warnings on record yet. ✅ All sectors clear.</div>`;
+        raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:10px;">No regional alerts on record yet.</div>`;
       }
     }
 
   } catch (err) {
     console.error('Radar fetch error:', err);
     if (badge) { badge.className = 'badge-low'; badge.textContent = 'RADAR OFFLINE'; }
-    if (distEl) distEl.textContent = 'Could not load live threat data. Please check network connection.';
-  } finally {
-    if (refreshBtnIcon) {
-      setTimeout(() => refreshBtnIcon.classList.remove('spin-fast'), 350);
-    }
+    if (distEl) distEl.textContent = 'Could not load live data. Please try refreshing the page.';
   }
 }
 
@@ -5230,7 +4681,7 @@ function fetchCitizenGps(updateRadarOnly) {
         const formSel = document.getElementById('citizen-village');
         if (formSel) formSel.value = nearest.id;
       }
-      updateVillageRadar(true);
+      updateVillageRadar();
     },
     err => {
       if (msgEl) msgEl.textContent = 'Location access not permitted. Using Sasan Gir default.';
@@ -5936,72 +5387,33 @@ async function trackCitizenClaim() {
   }
 }
 
-async function loadCitizenRegionalAlerts(isUserAction = false) {
-  const raEl = document.getElementById('citizen-recent-alerts');
-  const cntEl = document.getElementById('citizen-regional-count');
-  const regLiveEl = document.getElementById('regional-last-sync-time');
-  if (!raEl) return;
+async function loadCitizenRegionalAlerts() {
+  const el = document.getElementById('citizen-recent-alerts');
+  if (!el) return;
   try {
     const res = await api('/api/alerts');
-    const allAlerts = (res && res.success && Array.isArray(res.data)) ? res.data : [];
-    if (cntEl) {
-      cntEl.textContent = `${allAlerts.length} LIVE WARNINGS`;
-    }
-    if (regLiveEl) {
-      regLiveEl.innerHTML = `<i class="bi bi-clock me-1 text-primary"></i>Updated: ${new Date().toLocaleTimeString()} ${isUserAction ? '(Refreshed)' : ''}`;
-    }
-    const badgeClasses = { CRITICAL: 'badge-high', HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low' };
-    if (allAlerts.length) {
-      raEl.innerHTML = allAlerts.map(a => {
-        const sev  = (a.severity || 'LOW').toUpperCase();
-        const col  = sev === 'HIGH' || sev === 'CRITICAL' ? 'var(--high)' : sev === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
-        const icon = sev === 'HIGH' || sev === 'CRITICAL' ? '🔴' : sev === 'MEDIUM' ? '🟡' : '🟢';
-        const distStr = a.distance_km != null ? `📍 ${parseFloat(a.distance_km).toFixed(1)} km away` : '';
-        const spIcon = (typeof speciesIcon === 'function') ? speciesIcon(a.species) : '🐾';
-
-        const tsMillis = (typeof parseTs === 'function') ? parseTs(a.timestamp) : (new Date(a.timestamp).getTime() || Date.now());
-        const diffSec = Math.max(0, Math.floor((Date.now() - tsMillis) / 1000));
-        let liveSecText = '';
-        if (diffSec < 4) {
-          liveSecText = 'Just now (1s ago)';
-        } else if (diffSec < 60) {
-          liveSecText = `${diffSec}s ago`;
-        } else {
-          liveSecText = (typeof timeAgo === 'function') ? timeAgo(a.timestamp) : `${Math.floor(diffSec / 60)}m ago`;
-        }
-        const clockTime = (typeof formatAlertClockTime === 'function') ? formatAlertClockTime(a.timestamp) : '';
-
-        return `
-        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;border-left:4px solid ${col};">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-size:13px;">${icon}</span>
-              <strong style="font-size:13px;color:var(--text);">${a.village_name || 'Forest Sector'}</strong>
-              <span style="color:var(--muted);">· ${spIcon} ${a.species || ''}</span>
-              <span class="${badgeClasses[sev]||'badge-low'}" style="font-size:10px;padding:2px 7px;">${sev} RISK</span>
-              <span class="badge" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:9.5px;padding:2px 6px;border:1px solid rgba(16,185,129,0.3);"><i class="bi bi-shield-check me-1"></i>Officer Broadcast</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-wrap:wrap;">
-              <span>${distStr}</span>
-              ${clockTime ? `<span style="color:var(--text-secondary);font-size:10.5px;"><i class="bi bi-clock me-1"></i>${clockTime}</span>` : ''}
-              <span class="badge" style="background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.25);font-family:monospace;font-size:10.5px;padding:2px 7px;">
-                <i class="bi bi-stopwatch me-1"></i>${liveSecText}
-              </span>
-            </div>
+    if (res && res.success && res.data.length) {
+      el.innerHTML = res.data.slice(0, 3).map(a => `
+        <div style="background:var(--surface2);border-radius:6px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${a.severity==='HIGH'?'var(--high)':a.severity==='MEDIUM'?'var(--medium)':'var(--low)'};">
+          <div style="display:flex;justify-content:space-between;font-size:11px;">
+            <strong>${a.village_name}</strong>
+            <span style="color:var(--muted);">${timeAgo(a.timestamp)}</span>
           </div>
-          <div style="font-size:12.5px;color:var(--text);line-height:1.5;">${a.en_text || a.message || ''}</div>
-          ${a.gu_text ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px;font-style:italic;line-height:1.45;">${a.gu_text}</div>` : ''}
-        </div>`;
-      }).join('');
-    } else {
-      raEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center;">No regional warnings on record yet. ✅ All sectors clear.</div>`;
+          <div style="font-size:12px;margin-top:2px;">${a.gu_text || a.en_text}</div>
+        </div>
+      `).join('');
+      return;
     }
-    if (isUserAction && typeof showToast === 'function') {
-      showToast('Regional warnings refreshed', 'info', 1800);
-    }
-  } catch(e) {
-    console.error('Error loading citizen regional alerts:', e);
-  }
+  } catch(e) {}
+  el.innerHTML = `
+    <div style="background:var(--surface2);border-radius:6px;padding:8px 10px;border-left:3px solid var(--high);">
+      <div style="display:flex;justify-content:space-between;font-size:11px;">
+        <strong>Sasan Gir (સાસણ ગીર)</strong>
+        <span style="color:var(--muted);">Active Now</span>
+      </div>
+      <div style="font-size:12px;margin-top:2px;">ચેતવણી: સાસણ ગીર વિસ્તારમાં સિંહની હિલચાલ નોંધાઈ છે. પશુધન વાડામાં રાખો.</div>
+    </div>
+  `;
 }
 
 
@@ -6113,24 +5525,10 @@ async function loadDashboard(isManual = false) {
 function renderVillageTable() {
   if (!_dashData || !_dashData.villages) return;
   const vtb = document.getElementById('village-tbody');
-  if (!vtb) return;
   const countBadge = document.getElementById('village-filtered-count');
   const search = (document.getElementById('villageSearchInput')?.value || '').toLowerCase().trim();
 
   let list = _dashData.villages;
-
-  // Apply any active local overrides so background sync ticks never revert officer settings
-  if (window._villageThreatOverrides) {
-    const now = Date.now();
-    list.forEach(v => {
-      const ov = window._villageThreatOverrides[v.id];
-      if (ov && (now - ov.ts < 20000)) {
-        v.risk_level = ov.risk;
-        v.risk_score = ov.risk === 'HIGH' ? 0.88 : ov.risk === 'MEDIUM' ? 0.58 : 0.22;
-      }
-    });
-  }
-
   if (_villageRiskFilter !== 'ALL') {
     list = list.filter(v => (v.risk_level || '').toUpperCase() === _villageRiskFilter);
   }
@@ -6147,43 +5545,14 @@ function renderVillageTable() {
     return;
   }
 
-  // In-place DOM update if all rows already exist: avoids tearing down DOM and closing/resetting dropdowns
-  const existingRows = vtb.querySelectorAll('tr[id^="village-row-"]');
-  if (existingRows.length === list.length) {
-    let allFound = true;
-    for (const v of list) {
-      const row = document.getElementById(`village-row-${v.id}`);
-      if (!row) { allFound = false; break; }
-      const sel = row.querySelector('select.village-threat-select');
-      if (sel && document.activeElement !== sel) {
-        sel.value = v.risk_level;
-        sel.style.color = v.risk_level === 'HIGH' ? 'var(--high)' : v.risk_level === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
-      }
-      const scoreCell = row.querySelector('.village-score-cell');
-      if (scoreCell) {
-        scoreCell.innerHTML = `${riskBar(v.risk_score || 0, v.risk_level)}<span style="font-size:11px;color:var(--muted);margin-left:4px;">${((v.risk_score || 0) * 100).toFixed(0)}%</span>`;
-      }
-    }
-    if (allFound) return;
-  }
-
-  // If user currently has focus on any element inside the table, do not blow away table innerHTML
-  if (document.activeElement && vtb.contains(document.activeElement)) return;
-
   vtb.innerHTML = list.map(v => `
-    <tr id="village-row-${v.id}" class="table-row-clickable" onclick="inspectVillage('${v.id}')" title="Click to view village intelligence & past encounters">
+    <tr class="table-row-clickable" onclick="inspectVillage('${v.id}')" title="Click to view village intelligence & past encounters">
       <td style="font-weight:600;">
         ${v.name}
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">(${v.id})</span>
       </td>
-      <td onclick="event.stopPropagation()">
-        <select class="form-select-dark village-threat-select" onchange="setVillageThreatLevel('${v.id}', this.value)" style="font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;font-weight:700;color:${v.risk_level==='HIGH'?'var(--high)':v.risk_level==='MEDIUM'?'var(--medium)':'var(--low)'};background:var(--surface);">
-          <option value="HIGH" ${v.risk_level==='HIGH'?'selected':''}>🔴 HIGH</option>
-          <option value="MEDIUM" ${v.risk_level==='MEDIUM'?'selected':''}>🟡 MEDIUM</option>
-          <option value="LOW" ${v.risk_level==='LOW'?'selected':''}>🟢 LOW</option>
-        </select>
-      </td>
-      <td class="village-score-cell">
+      <td>${riskBadge(v.risk_level)}</td>
+      <td>
         ${riskBar(v.risk_score||0, v.risk_level)}
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">${((v.risk_score||0)*100).toFixed(0)}%</span>
       </td>
@@ -6342,62 +5711,6 @@ function renderAlertsSummary() {
     </div>`).join('');
 }
 
-// ── OFFICER SET VILLAGE THREAT LEVEL ────────────────────────
-async function setVillageThreatLevel(vid, newRisk) {
-  // 1. Instantly record override with timestamp so background sync never flips it back
-  if (!window._villageThreatOverrides) window._villageThreatOverrides = {};
-  window._villageThreatOverrides[vid] = { risk: newRisk, ts: Date.now() };
-
-  // 2. Optimistically update local _dashData so any re-renders use this level immediately
-  if (_dashData && _dashData.villages) {
-    const v = _dashData.villages.find(x => x.id === vid);
-    if (v) {
-      v.risk_level = newRisk;
-      v.risk_score = newRisk === 'HIGH' ? 0.88 : newRisk === 'MEDIUM' ? 0.58 : 0.22;
-    }
-  }
-
-  // 3. Immediately reflect in DOM in-place without page jump or closing dropdowns
-  const row = document.getElementById(`village-row-${vid}`);
-  if (row) {
-    const sel = row.querySelector('select.village-threat-select');
-    if (sel) {
-      sel.value = newRisk;
-      sel.style.color = newRisk === 'HIGH' ? 'var(--high)' : newRisk === 'MEDIUM' ? 'var(--medium)' : 'var(--low)';
-    }
-    const scoreCell = row.querySelector('.village-score-cell');
-    if (scoreCell) {
-      const score = newRisk === 'HIGH' ? 0.88 : newRisk === 'MEDIUM' ? 0.58 : 0.22;
-      scoreCell.innerHTML = `${riskBar(score, newRisk)}<span style="font-size:11px;color:var(--muted);margin-left:4px;">${Math.round(score * 100)}%</span>`;
-    }
-  }
-
-  // 4. Update GPS map in-place
-  if (_dashData && window.syncGpsMapWithData) {
-    window.syncGpsMapWithData(_dashData);
-  }
-
-  // 5. Send threat override to server
-  try {
-    const res = await api(`/api/villages/${vid}/threat`, 'POST', { risk_level: newRisk });
-    if (res && res.success) {
-      if (typeof showToast === 'function') {
-        showToast(`⚡ Threat level for ${res.data.village_name || vid} set to ${newRisk}! Syncing to citizens.`, 'success', 3000);
-      }
-      const modal = document.getElementById('villageDetailModal');
-      if (modal && modal.classList.contains('show')) {
-        inspectVillage(vid);
-      }
-    }
-  } catch (err) {
-    console.error('Failed to set threat level:', err);
-    delete window._villageThreatOverrides[vid];
-    if (typeof showToast === 'function') {
-      showToast('Error updating threat level', 'error', 3000);
-    }
-  }
-}
-
 // ── INSPECT VILLAGE MODAL ──
 function inspectVillage(vid) {
   if (!_dashData || !_dashData.villages) return;
@@ -6443,7 +5756,7 @@ function inspectVillage(vid) {
       </div>
     </div>
 
-    <div style="margin-bottom:12px;">
+    <div>
       <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">
         Historical & Active Conflict Cases (${incidents.length})
       </div>
@@ -6453,28 +5766,6 @@ function inspectVillage(vid) {
             <span><code style="color:var(--blue);">${i.id}</code> ${i.species}</span>
             <span>${statusBadge(i.status)}</span>
           </div>`).join('') : '<div style="color:var(--muted);font-size:11.5px;padding:6px;">No recorded conflict incidents.</div>'}
-      </div>
-    </div>
-
-    <!-- Officer Live Threat Level Command Controls -->
-    <div style="background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.25);border-radius:var(--radius-sm);padding:12px;margin-top:14px;">
-      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-        <span><i class="bi bi-shield-fill-exclamation text-danger me-1"></i>Officer Threat Level Control</span>
-        <span style="font-size:10.5px;color:var(--primary);font-weight:700;">● LIVE 1s CITIZEN SYNC</span>
-      </div>
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">
-        Click below to immediately update the CURRENT THREAT LEVEL for ${v.name}. Citizens will see the updated warning within 1 second.
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <button type="button" class="btn-red" style="padding:7px;font-size:12px;font-weight:700;${v.risk_level==='HIGH'?'box-shadow:0 0 10px rgba(244,63,94,0.6);border:2px solid #fff;':''}" onclick="setVillageThreatLevel('${v.id}', 'HIGH')">
-          🔴 SET HIGH
-        </button>
-        <button type="button" class="btn-amber" style="padding:7px;font-size:12px;font-weight:700;${v.risk_level==='MEDIUM'?'box-shadow:0 0 10px rgba(245,158,11,0.6);border:2px solid #fff;':''}" onclick="setVillageThreatLevel('${v.id}', 'MEDIUM')">
-          🟡 SET MEDIUM
-        </button>
-        <button type="button" class="btn-green" style="padding:7px;font-size:12px;font-weight:700;${v.risk_level==='LOW'?'box-shadow:0 0 10px rgba(16,185,129,0.6);border:2px solid #fff;':''}" onclick="setVillageThreatLevel('${v.id}', 'LOW')">
-          🟢 SET LOW
-        </button>
       </div>
     </div>
   `;
@@ -6829,16 +6120,19 @@ async function _crossDeviceSyncTick() {
     if (serverTs > _syncLastKnown) {
       _syncLastKnown = serverTs;
       // Refresh whichever section is currently visible
-      const activePage = document.querySelector('.page.active');
+      const activePage = document.querySelector('.tab-content.active');
       const pageId = activePage ? activePage.id : '';
       if (pageId === 'page-dashboard')   { loadDashboard(false); }
       if (pageId === 'page-alerts')      { if (typeof loadAlerts      === 'function') loadAlerts(); }
       if (pageId === 'page-incidents')   { if (typeof loadIncidents   === 'function') loadIncidents(); }
       if (pageId === 'page-hotspots')    { if (typeof loadHotspots    === 'function') loadHotspots(); }
       if (pageId === 'page-compensation'){ if (typeof loadClaims      === 'function') loadClaims(); }
-      // Citizen page — regional warnings update on live sync, Village Safety Radar stays strictly on-demand
+      // Citizen Safety Radar — refresh threat level in real time
       if (pageId === 'page-citizen') {
-        if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
+        const radarView = document.getElementById('view-citizen-radar');
+        if (radarView && radarView.style.display !== 'none') {
+          updateVillageRadar();
+        }
       }
       // Show a subtle "Data updated" toast so user knows sync happened
       if (typeof showToast === 'function') {
@@ -6848,82 +6142,7 @@ async function _crossDeviceSyncTick() {
   } catch (_) { /* network offline — silently skip */ }
 }
 
-setInterval(_crossDeviceSyncTick, 1000);
-
-// ── LIVE WEBSOCKET (websocat & browser compatible) ─────────────────────────
-let _vanrakshakWS = null;
-
-function initLiveWebSocket() {
-  const isHttps = window.location.protocol === 'https:';
-  const proto = isHttps ? 'wss:' : 'ws:';
-  const host = window.location.hostname || 'localhost';
-  const wsUrl = `${proto}//${host}:8765`;
-
-  try {
-    _vanrakshakWS = new WebSocket(wsUrl);
-    _vanrakshakWS.onopen = () => {
-      console.log('📡 Connected to VanRakshak Live WebSocket on port 8765');
-      const badge = document.getElementById('regional-live-text');
-      if (badge) badge.innerHTML = 'LIVE (WEBSOCKET)';
-    };
-    _vanrakshakWS.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        console.log('⚡ WebSocket Live Push Event:', payload);
-        if (payload.timestamp) _syncLastKnown = payload.timestamp;
-        if (payload.last_updated) _syncLastKnown = payload.last_updated;
-        if (payload.type === 'THREAT_UPDATE') {
-          const citizenPage = document.getElementById('page-citizen');
-          if (citizenPage && citizenPage.classList.contains('active')) {
-            if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
-          }
-          if (typeof loadAlerts === 'function') loadAlerts();
-          if (typeof loadDashboard === 'function') loadDashboard(false);
-          if (typeof showToast === 'function') {
-            showToast('⚡ Live WebSocket: Wildlife threat status updated!', 'info', 2500);
-          }
-        }
-      } catch (_) {}
-    };
-    _vanrakshakWS.onerror = () => {
-      const badge = document.getElementById('regional-live-text');
-      if (badge) badge.innerHTML = 'LIVE (SSE STREAM)';
-      initSSE();
-    };
-    _vanrakshakWS.onclose = () => {
-      // Auto-reconnect after 4s
-      setTimeout(initLiveWebSocket, 4000);
-    };
-  } catch (_) {
-    initSSE();
-  }
-}
-
-// SSE fallback stream on port 5000 over standard HTTP
-let _sseStream = null;
-function initSSE() {
-  if (typeof EventSource === 'undefined' || _sseStream) return;
-  try {
-    _sseStream = new EventSource('/api/events');
-    _sseStream.onmessage = (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.last_updated) _syncLastKnown = d.last_updated;
-        if (d.type === 'THREAT_UPDATE') {
-          const citizenPage = document.getElementById('page-citizen');
-          if (citizenPage && citizenPage.classList.contains('active')) {
-            if (typeof loadCitizenRegionalAlerts === 'function') loadCitizenRegionalAlerts();
-          }
-          if (typeof loadAlerts === 'function') loadAlerts();
-          if (typeof loadDashboard === 'function') loadDashboard(false);
-        }
-      } catch (_) {}
-    };
-  } catch (_) {}
-}
-
-// Start live WebSocket stream immediately
-initLiveWebSocket();
+setInterval(_crossDeviceSyncTick, 3000);
 
 // ── ALERTS ───────────────────────────────────────────────────
 let _rawAlerts = [];

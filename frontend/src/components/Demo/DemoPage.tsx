@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { runDemo } from '../../api/client';
 import type { DemoStep, DemoStepStatus } from '../../types';
+import { broadcastEmergencyAlert } from '../../utils/alertBroadcaster';
 
 // ─── Fallback demo steps ──────────────────────────────────────────────────────
 
@@ -9,9 +10,9 @@ const DEMO_STEPS_TEMPLATE: Omit<DemoStep, 'status' | 'timestamp'>[] = [
     step: 1,
     icon: '🦁',
     title: 'Wildlife sighting reported',
-    description: 'Forest guard Ramesh Patel reports an Asiatic Lion sighting near Maldhari settlement, Sasan Gir area at 08:15 AM.',
+    description: 'Forest Patrol Alpha reports an Asiatic Lion sighting near Maldhari settlement, Sasan Gir area at 08:15 AM.',
     agent: undefined,
-    data: { sighting_id: 'S-001', species: 'Asiatic Lion', location: 'Sasan Gir Sector 7', reported_by: 'Forest Guard Ramesh Patel', time: '08:15 AM' },
+    data: { sighting_id: 'S-001', species: 'Asiatic Lion', location: 'Sasan Gir Sector 7', reported_by: 'Forest Patrol Alpha (ADMIN)', time: '08:15 AM' },
   },
   {
     step: 2,
@@ -94,10 +95,10 @@ const DEMO_STEPS_TEMPLATE: Omit<DemoStep, 'status' | 'timestamp'>[] = [
     step: 10,
     icon: '👮',
     title: 'Officer reviews AI recommendation',
-    description: 'Forest Officer Mehra receives push notification on dashboard. Reviews incident INC-001, risk score 0.87, and recommended team dispatch.',
+    description: 'Forest Officer ADMIN receives push notification on dashboard. Reviews incident INC-001, risk score 0.87, and recommended team dispatch.',
     agent: undefined,
     data: {
-      officer: 'Officer Mehra',
+      officer: 'ADMIN',
       review_time_seconds: 45,
       risk_score_shown: 0.87,
       recommendation: 'Dispatch Rapid Response Team Alpha — 4 personnel',
@@ -107,10 +108,10 @@ const DEMO_STEPS_TEMPLATE: Omit<DemoStep, 'status' | 'timestamp'>[] = [
     step: 11,
     icon: '✔️',
     title: 'Officer approves action',
-    description: 'Officer Mehra approves dispatch. System records officer approval with timestamp. Team dispatch authorized — AI recommendation confirmed.',
+    description: 'ADMIN approves dispatch. System records officer approval with timestamp. Team dispatch authorized — AI recommendation confirmed.',
     agent: 'Agent 4: IncidentOrchestrator',
     data: {
-      approved_by: 'Officer Mehra (Badge: FR-2847)',
+      approved_by: 'ADMIN (Badge: FR-2847)',
       approval_time: '08:22 AM',
       incident_status: 'ASSIGNED',
       team_dispatched: 'Rapid Response Team Alpha',
@@ -190,6 +191,25 @@ export default function DemoPage() {
           : i === 10
           ? STEP_DELAY_MS * 1.8
           : STEP_DELAY_MS;
+
+      // Broadcast alert to citizen portal on alert generation (step 7) and officer approval (step 11)
+      if (i === 6 || i === 10) {
+        broadcastEmergencyAlert({
+          alert_id: 'ALT-DEMO-001',
+          village_name: 'Sasan Gir',
+          species: 'Asiatic Lion',
+          severity: 'HIGH',
+          distance_km: 1.8,
+          timestamp: new Date().toISOString(),
+          en_text: '⚠️ HIGH RISK: Asiatic Lion sighted 1.8km from Sasan Gir settlement. Rapid Response unit dispatched.',
+          gu_text: '⚠️ ઉચ્ચ જોખમ: સાસણ ગીર નજીક ૧.૮ કિમી અંતરે સિંહ જોવા મળ્યો છે. પશુધનને સુરક્ષિત વાડામાં રાખો.',
+          safety_actions: [
+            'Secure livestock immediately in covered pens',
+            'Avoid unlit paths and carry torches',
+            'Emergency patrol team en route — call 1926 if spotted',
+          ],
+        });
+      }
 
       await new Promise((res) => setTimeout(res, delay));
     }

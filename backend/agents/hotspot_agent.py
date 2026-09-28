@@ -61,7 +61,7 @@ class HotspotDashboardAgent:
 
     AGENT_NAME = "hotspot_agent"
 
-    def analyze_hotspots(self, top_n: int = 5) -> dict:
+    def analyze_hotspots(self, top_n: int = 5, incidents: Optional[list[dict]] = None) -> dict:
         """
         Cluster incidents into geographic grid cells and rank hotspots.
 
@@ -74,6 +74,7 @@ class HotspotDashboardAgent:
 
         Args:
             top_n : Number of top hotspot zones to return (default 5)
+            incidents : Optional list of incidents to analyse (defaults to SAMPLE_INCIDENTS)
 
         Returns:
             Dict with hotspots, trends, risk_zones, summary, metadata
@@ -97,18 +98,27 @@ class HotspotDashboardAgent:
             "types": [], "villages": set(), "severities": [],
         })
 
-        for inc in SAMPLE_INCIDENTS:
-            vid = inc["village_id"]
-            if vid not in village_coords:
-                continue
+        target_incidents = incidents if incidents is not None else SAMPLE_INCIDENTS
+
+        for inc in target_incidents:
+            vid = inc.get("village_id")
+            if not vid or vid not in village_coords:
+                # Try matching by name if vid not found
+                v_match = next((v["village_id"] for v in SAMPLE_VILLAGES if v["name"].lower() == str(inc.get("village", "")).lower()), None)
+                if v_match:
+                    vid = v_match
+                else:
+                    vid = "VLG001"
+
             lat, lon = village_coords[vid]
             cell = _grid_cell(lat, lon)
-            days = _days_ago(inc["date"], now)
+            date_val = inc.get("date") or inc.get("timestamp") or now.isoformat()
+            days = _days_ago(date_val, now)
 
             cell_stats[cell]["total"]     += 1
-            cell_stats[cell]["types"].append(inc["type"])
+            cell_stats[cell]["types"].append(inc.get("type", "wildlife_sighting"))
             cell_stats[cell]["villages"].add(vid)
-            cell_stats[cell]["severities"].append(inc["severity"])
+            cell_stats[cell]["severities"].append(inc.get("severity", "MEDIUM"))
 
             if days <= 15:
                 cell_stats[cell]["recent"] += 1
@@ -204,7 +214,7 @@ class HotspotDashboardAgent:
             "is_demo": True,
         }
 
-    def generate_daily_summary(self) -> str:
+    def generate_daily_summary(self, incidents: Optional[list[dict]] = None) -> str:
         """
         Generate a concise operational daily summary for Forest Officers.
 
@@ -216,15 +226,16 @@ class HotspotDashboardAgent:
         """
         now      = datetime.now(timezone.utc)
         date_str = now.strftime("%d %b %Y")
+        target_inc = incidents if incidents is not None else SAMPLE_INCIDENTS
 
         # Quick stats
-        incidents_7d   = sum(1 for i in SAMPLE_INCIDENTS if _days_ago(i["date"], now) <= 7)
-        incidents_30d  = len(SAMPLE_INCIDENTS)
-        high_severity  = sum(1 for i in SAMPLE_INCIDENTS if i["severity"] == "HIGH")
-        active         = sum(1 for i in SAMPLE_INCIDENTS if i["status"] in ("NEW", "ASSIGNED", "IN_PROGRESS"))
-        sightings_24h  = sum(1 for s in SAMPLE_SIGHTINGS if _days_ago(s["timestamp"], now) <= 1)
+        incidents_7d   = sum(1 for i in target_inc if _days_ago(i.get("date") or i.get("timestamp") or "", now) <= 7)
+        incidents_30d  = len(target_inc)
+        high_severity  = sum(1 for i in target_inc if i.get("severity") == "HIGH")
+        active         = sum(1 for i in target_inc if i.get("status") in ("NEW", "ASSIGNED", "IN_PROGRESS"))
+        sightings_24h  = sum(1 for s in SAMPLE_SIGHTINGS if _days_ago(s.get("timestamp") or "", now) <= 1)
 
-        hotspot_data   = self.analyze_hotspots(top_n=3)
+        hotspot_data   = self.analyze_hotspots(top_n=3, incidents=target_inc)
         top_zones      = ", ".join(
             f"{h['villages'][0] if h['villages'] else 'Unknown'} ({h['risk_level']})"
             for h in hotspot_data["hotspots"][:3]

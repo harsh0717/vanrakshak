@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { reportSighting, isBackendOnline } from '../../api/client';
+import { useState, useEffect, useRef } from 'react';
+import { reportSighting, isBackendOnline, triggerSos, startCompensation, getCompensation, getAlerts } from '../../api/client';
+import { broadcastEmergencyAlert } from '../../utils/alertBroadcaster';
 
 interface VillageInfo {
   id: string;
@@ -12,13 +13,14 @@ interface VillageInfo {
 }
 
 const VILLAGES: VillageInfo[] = [
-  { id: 'V001', name: 'Sasan Gir', name_gu: 'સાસણ ગીર', risk: 'HIGH', dist: '0.8 km', animal: 'Asiatic Lion', animal_gu: 'સિંહ' },
-  { id: 'V002', name: 'Dhari', name_gu: 'ધારી', risk: 'MEDIUM', dist: '2.4 km', animal: 'Leopard', animal_gu: 'દીપડો' },
-  { id: 'V003', name: 'Talala', name_gu: 'તાળાળા', risk: 'HIGH', dist: '1.1 km', animal: 'Asiatic Lion', animal_gu: 'સિંહ' },
-  { id: 'V004', name: 'Visavadar', name_gu: 'વિસાવદર', risk: 'MEDIUM', dist: '3.1 km', animal: 'Wild Boar', animal_gu: 'જંગલી ભૂંડ' },
-  { id: 'V005', name: 'Una', name_gu: 'ઉના', risk: 'LOW', dist: '6.5 km', animal: 'Nilgai', animal_gu: 'નીલગાય' },
-  { id: 'V006', name: 'Mendarda', name_gu: 'મેંદરડા', risk: 'LOW', dist: '5.2 km', animal: 'Hyena', animal_gu: 'લકડબઘ્ઘો' },
-  { id: 'V007', name: 'Junagadh', name_gu: 'જૂનાગઢ', risk: 'LOW', dist: '8.0 km', animal: 'None reported', animal_gu: 'કોઈ નથી' },
+  { id: 'VLG001', name: 'Sasan Gir', name_gu: 'સાસણ ગીર', risk: 'HIGH', dist: '0.8 km', animal: 'Asiatic Lion', animal_gu: 'સિંહ' },
+  { id: 'VLG002', name: 'Dhari', name_gu: 'ધારી', risk: 'MEDIUM', dist: '2.4 km', animal: 'Leopard', animal_gu: 'દીપડો' },
+  { id: 'VLG003', name: 'Khambha', name_gu: 'ખાંભા', risk: 'MEDIUM', dist: '4.0 km', animal: 'Wild Boar', animal_gu: 'જંગલી ભૂંડ' },
+  { id: 'VLG004', name: 'Una', name_gu: 'ઉના', risk: 'MEDIUM', dist: '6.5 km', animal: 'Nilgai', animal_gu: 'નીલગાય' },
+  { id: 'VLG005', name: 'Rajula', name_gu: 'રાજુલા', risk: 'LOW', dist: '8.2 km', animal: 'Hyena', animal_gu: 'લકડબઘ્ઘો' },
+  { id: 'VLG006', name: 'Talala', name_gu: 'તાલાલા', risk: 'HIGH', dist: '1.1 km', animal: 'Asiatic Lion', animal_gu: 'સિંહ' },
+  { id: 'VLG007', name: 'Mendarda', name_gu: 'મેંદરડા', risk: 'LOW', dist: '5.2 km', animal: 'Leopard', animal_gu: 'દીપડો' },
+  { id: 'VLG008', name: 'Kodinar', name_gu: 'કોડીનાર', risk: 'LOW', dist: '7.4 km', animal: 'None reported', animal_gu: 'કોઈ નથી' },
 ];
 
 const SPECIES_LIST = [
@@ -31,7 +33,7 @@ const SPECIES_LIST = [
 
 export default function CitizenPage() {
   const [lang, setLang] = useState<'en' | 'gu'>('en');
-  const [selectedVillageId, setSelectedVillageId] = useState('V001');
+  const [selectedVillageId, setSelectedVillageId] = useState('VLG001');
   const [gpsStatus, setGpsStatus] = useState<string | null>(null);
 
   // Sighting form state
@@ -52,7 +54,7 @@ export default function CitizenPage() {
   // Compensation state
   const [compTab, setCompTab] = useState<'file' | 'track'>('file');
   const [claimName, setClaimName] = useState('');
-  const [claimVillage, setClaimVillage] = useState('V001');
+  const [claimVillage, setClaimVillage] = useState('VLG001');
   const [claimType, setClaimType] = useState('buffalo');
   const [claimCount, setClaimCount] = useState('1');
   const [claimResult, setClaimResult] = useState<any>(null);
@@ -60,6 +62,65 @@ export default function CitizenPage() {
   const [trackResult, setTrackResult] = useState<any>(null);
 
   const selectedVillage = VILLAGES.find((v) => v.id === selectedVillageId) || VILLAGES[0];
+
+  const seenAlertsRef = useRef<Set<string>>(new Set());
+  const initialLoadTimeRef = useRef<number>(Date.now());
+
+  // Poll for live/approved alerts from backend every 4 seconds
+  useEffect(() => {
+    let isMounted = true;
+
+    const pollAlerts = async () => {
+      try {
+        const alerts = await getAlerts();
+        if (!isMounted || !alerts || !Array.isArray(alerts)) return;
+
+        for (const alert of alerts) {
+          const alertId = alert.id || alert.alert_id;
+          if (!alertId || seenAlertsRef.current.has(alertId)) continue;
+
+          const alertTime = new Date(alert.timestamp || alert.issued_at || 0).getTime();
+          const isHighOrApproved =
+            alert.risk_level === 'HIGH' ||
+            alert.severity === 'HIGH' ||
+            Boolean(alert.officer_approved) ||
+            Boolean(alert.broadcast);
+          const isRecent = alertTime > initialLoadTimeRef.current - 180000;
+
+          if (isHighOrApproved && isRecent) {
+            seenAlertsRef.current.add(alertId);
+            if (typeof (window as any).triggerEmergencyAlert === 'function') {
+              (window as any).triggerEmergencyAlert({
+                alert_id: alertId,
+                village_id: alert.village_id,
+                village_name: alert.village || alert.village_name,
+                species: alert.species,
+                severity: (alert.risk_level || alert.severity || 'HIGH') as any,
+                distance_km: alert.distance_km,
+                timestamp: alert.timestamp || alert.issued_at,
+                en_text: alert.message_en || alert.message_english,
+                gu_text: alert.message_gu || alert.message_gujarati,
+                safety_actions: alert.safety_actions,
+              });
+            }
+            break;
+          } else {
+            seenAlertsRef.current.add(alertId);
+          }
+        }
+      } catch (err) {
+        // silent fallback
+      }
+    };
+
+    pollAlerts();
+    const interval = setInterval(pollAlerts, 4000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleFetchGps = () => {
     if (!navigator.geolocation) {
@@ -82,10 +143,44 @@ export default function CitizenPage() {
     );
   };
 
-  const handleSendSos = () => {
-    setSosStatus(
-      '🚨 DISTRESS BEACON TRANSMITTED! Nearest Gujarat Forest Department Rapid Response Patrol & Sasan Gir Control Room (02877-285541) alerted with your coordinates.'
-    );
+  const handleSendSos = async () => {
+    // Also trigger cross-tab broadcast so citizen emergency channel announces SOS
+    broadcastEmergencyAlert({
+      alert_id: 'SOS-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+      village_id: selectedVillageId,
+      village_name: selectedVillage.name,
+      species,
+      severity: 'HIGH',
+      distance_km: parseFloat(distanceKm) || 0.5,
+      timestamp: new Date().toISOString(),
+      en_text: `🚨 DISTRESS SOS: Villager emergency beacon transmitted near ${selectedVillage.name}! Rapid Response Patrol dispatched.`,
+      gu_text: `🚨 તાત્કાલિક એસ.ઓ.એસ.: ${selectedVillage.name} પાસે ગ્રામજન સંકટ બીકન સક્રિય! વન વિભાગ ટીમ રવાના.`,
+      safety_actions: [
+        'Move indoors immediately and guard children and cattle',
+        'Turn on high-beam torches or perimeter security lights',
+        'Gujarat Forest Dept Rapid Response unit notified via 1926',
+      ],
+    });
+
+    try {
+      const res = await triggerSos({
+        lat: parseFloat(lat) || 21.1242,
+        lon: parseFloat(lon) || 70.5521,
+        village_id: selectedVillageId,
+        species,
+        contact: phone || 'Citizen SOS Beacon',
+        message: `Urgent villager distress beacon near ${selectedVillage.name}`,
+        distance_km: parseFloat(distanceKm) || 0.5,
+      });
+      const helpline = res?.helplines?.forest_dept_toll_free ? ` [Helpline: ${res.helplines.forest_dept_toll_free}]` : '';
+      setSosStatus(
+        `🚨 DISTRESS BEACON TRANSMITTED! Gujarat Forest Dept Rapid Response Patrol & Sasan Gir Control Room alerted.${helpline}`
+      );
+    } catch {
+      setSosStatus(
+        '🚨 DISTRESS BEACON TRANSMITTED! Nearest Gujarat Forest Department Rapid Response Patrol & Sasan Gir Control Room (02877-285541) alerted with your coordinates.'
+      );
+    }
   };
 
   const handleSubmitSighting = async (e: React.FormEvent) => {
@@ -98,6 +193,7 @@ export default function CitizenPage() {
       lat: parseFloat(lat),
       lon: parseFloat(lon),
       nearest_village_id: selectedVillageId,
+      village: selectedVillage.name,
       distance_km: parseFloat(distanceKm),
       time_of_day: timeOfDay,
       count: parseInt(count) || 1,
@@ -125,7 +221,7 @@ export default function CitizenPage() {
     }
   };
 
-  const handleSubmitClaim = (e: React.FormEvent) => {
+  const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!claimName) {
       alert('Please enter Claimant Name');
@@ -133,19 +229,61 @@ export default function CitizenPage() {
     }
     const rate = claimType === 'buffalo' ? 30000 : claimType === 'cow' ? 25000 : 5000;
     const est = rate * (parseInt(claimCount) || 1);
+    const vName = VILLAGES.find((v) => v.id === claimVillage)?.name || 'Sasan Gir';
+
+    try {
+      const claim = await startCompensation({
+        incident_id: 'INC001',
+        villager_name: claimName,
+        village: claimVillage,
+        contact: phone || 'Not provided',
+        loss_type: 'LIVESTOCK_PREDATION',
+        loss_details: `${claimCount} ${claimType} lost due to wildlife predation near ${vName}`,
+        estimated_value: est,
+        animals_lost: parseInt(claimCount) || 1,
+      });
+      if (claim) {
+        setClaimResult({
+          id: claim.claim_id,
+          name: claim.villager_name || claimName,
+          amount: claim.estimated_value || est,
+          village: claim.village || vName,
+          disclaimer: 'Indicative prototype estimate — subject to field officer verification.',
+        });
+        return;
+      }
+    } catch {
+      // fallback
+    }
+
     const newId = 'CLM-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     setClaimResult({
       id: newId,
       name: claimName,
       amount: est,
-      village: VILLAGES.find((v) => v.id === claimVillage)?.name || 'Sasan Gir',
+      village: vName,
+      disclaimer: 'Indicative prototype estimate — subject to field officer verification.',
     });
   };
 
-  const handleTrackClaim = () => {
+  const handleTrackClaim = async () => {
     if (!trackId.trim()) {
       alert('Please enter Claim Reference ID');
       return;
+    }
+    try {
+      const claim = await getCompensation(trackId.trim());
+      if (claim) {
+        setTrackResult({
+          id: claim.claim_id,
+          status: claim.officer_review_status || 'UNDER PHYSICAL VERIFICATION',
+          officer: 'Range Forest Officer (RFO), Sasan Range',
+          timeline: 'Field inspection scheduled within 48 hours. Direct Bank Transfer upon approval.',
+        });
+        return;
+      }
+    } catch {
+      // fallback
     }
     setTrackResult({
       id: trackId.toUpperCase(),
@@ -700,7 +838,7 @@ export default function CitizenPage() {
                   type="text"
                   value={claimName}
                   onChange={(e) => setClaimName(e.target.value)}
-                  placeholder="e.g. Ramesh Devrajbhai Patel"
+                  placeholder="e.g. Ramesh Devrajbhai"
                   required
                   style={{
                     width: '100%',

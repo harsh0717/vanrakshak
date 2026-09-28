@@ -24,6 +24,7 @@ export interface Sighting {
 export interface Alert {
   id: string;
   incident_id?: string;
+  approval_id?: string;
   village: string;
   species: string;
   risk_level: RiskLevel;
@@ -36,11 +37,20 @@ export interface Alert {
   officer_approved: boolean;
   officer_override: boolean;
   pending_review: boolean;
+  alert_id?: string;
+  village_id?: string;
+  village_name?: string;
+  severity?: RiskLevel;
+  broadcast?: boolean;
+  issued_at?: string;
+  message_english?: string;
+  message_gujarati?: string;
 }
 
 export interface Incident {
   id: string;
   display_id: string;
+  approval_id?: string;
   village: string;
   species: string;
   severity: RiskLevel;
@@ -52,6 +62,7 @@ export interface Incident {
   description: string;
   pending_approval: boolean;
   sighting_id?: string;
+  distance_km?: number;
 }
 
 export interface AgentInfo {
@@ -170,11 +181,18 @@ export interface ApproveRequest {
 
 export interface SightingCreateRequest {
   species: string;
-  location: string;
-  village: string;
-  distance_km: number;
+  location?: string;
+  village?: string;
+  nearest_village_id?: string;
+  distance_km?: number;
   confidence?: number;
   reported_by?: string;
+  lat?: number;
+  lon?: number;
+  count?: number;
+  time_of_day?: string;
+  notes?: string;
+  source?: string;
 }
 
 // ─── Village Map ──────────────────────────────────────────────────────────────

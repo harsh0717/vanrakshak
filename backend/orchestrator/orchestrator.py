@@ -201,6 +201,33 @@ class VanRakshakOrchestrator:
         )
         self.shared_state["approvals"].append(approval)
 
+        # ── Step 8b: Persist the generated incident into shared_state["incidents"]
+        new_incident = {
+            "incident_id":      ticket["incident_id"],
+            "type":             "livestock_predation",
+            "severity":         assessment["consensus_risk_level"],
+            "village_id":       village_id,
+            "village_name":     village["name"],
+            "species":          sighting_data.get("species", "Unknown"),
+            "date":             started_at.isoformat(),
+            "losses":           "Under active assessment",
+            "status":           "NEW",
+            "risk_score":       round(assessment["risk_assessment"]["risk_score"], 2),
+            "recommended_team": ticket.get("recommended_team_name", "Forest Patrol Unit"),
+            "assigned_officer": None,
+            "description":      f"Incident from sighting {sighting_data['sighting_id']} near {village['name']}",
+            "pending_approval": True,
+            "sighting_id":      sighting_data["sighting_id"],
+            "approval_id":      approval["approval_id"],
+            "ticket_id":        ticket["ticket_id"],
+            "is_demo":          True,
+        }
+        self.shared_state["incidents"].insert(0, new_incident)
+
+        if alert_result:
+            alert_result["incident_id"] = ticket["incident_id"]
+            alert_result["approval_id"] = approval["approval_id"]
+
         # ── Step 9 & 10: Return workflow result ────────────────────────────
         return {
             "workflow_id":       workflow_id,
@@ -212,6 +239,7 @@ class VanRakshakOrchestrator:
             "risk_assessment":   assessment,
             "alert":             alert_result,
             "incident_ticket":   ticket,
+            "incident":          new_incident,
             "pending_approval":  approval,
             "human_approval_required": True,
             "note": (
@@ -236,35 +264,33 @@ class VanRakshakOrchestrator:
     ) -> dict:
         """
         Process an officer approval, rejection, or override for a pending action.
-
-        Steps:
-            1. Find the approval record by ID
-            2. Validate decision value
-            3. Update approval record
-            4. If APPROVED / OVERRIDE → update incident ticket status
-            5. Log the officer action
-
-        Args:
-            approval_id   : ID of the pending approval record
-            officer_id    : Forest Officer ID
-            decision      : "APPROVED" | "REJECTED" | "OVERRIDE"
-            override_data : Optional dict with fields to override (team, priority, etc.)
-            notes         : Optional officer notes
-
-        Returns:
-            Result dict with updated approval and next-step info
+        Synchronizes approval, incident, ticket, and alert states.
         """
-        # Find approval record
+        # Find approval record by approval_id, or fallback by ticket_id or incident_id
         approval = next(
-            (a for a in self.pending_approvals if a["approval_id"] == approval_id),
+            (a for a in self.pending_approvals
+             if a["approval_id"] == approval_id or a.get("ticket_id") == approval_id or a.get("incident_id") == approval_id),
             None,
         )
         if approval is None:
-            # Also check shared_state approvals
             approval = next(
-                (a for a in self.shared_state["approvals"] if a["approval_id"] == approval_id),
+                (a for a in self.shared_state["approvals"]
+                 if a["approval_id"] == approval_id or a.get("ticket_id") == approval_id or a.get("incident_id") == approval_id),
                 None,
             )
+
+        # If still not found, check if approval_id matches an incident and auto-create an approval record
+        if approval is None:
+            inc = next((i for i in self.shared_state["incidents"] if i.get("incident_id") == approval_id), None)
+            if inc:
+                approval = self._create_pending_approval(
+                    ticket_id=inc.get("ticket_id", f"TKT-{approval_id}"),
+                    incident_id=approval_id,
+                    sighting_id=inc.get("sighting_id", "SGT-HISTORICAL"),
+                    risk_level=inc.get("severity", "MEDIUM"),
+                )
+                self.shared_state["approvals"].append(approval)
+
         if approval is None:
             return {
                 "success": False,
@@ -287,9 +313,11 @@ class VanRakshakOrchestrator:
         approval["notes"]        = notes
         approval["override_data"]= override_data
 
-        # Update ticket status if approved
         ticket_id = approval.get("ticket_id")
+        incident_id = approval.get("incident_id")
         status_result = None
+
+        # 1. Update ticket status
         if ticket_id and decision in ("APPROVED", "OVERRIDE"):
             status_result = self.agents["response"].update_incident_status(
                 ticket_id=ticket_id,
@@ -298,28 +326,109 @@ class VanRakshakOrchestrator:
                 notes=notes,
             )
 
+        # 2. Update linked incident status in shared_state["incidents"]
+        if incident_id:
+            matching_inc = next((i for i in self.shared_state["incidents"] if i.get("incident_id") == incident_id), None)
+            if matching_inc:
+                matching_inc["status"] = "ASSIGNED" if decision in ("APPROVED", "OVERRIDE") else "CLOSED"
+                matching_inc["pending_approval"] = False
+                matching_inc["assigned_officer"] = officer_id
+                if notes:
+                    matching_inc["resolution_notes"] = notes
+
+        # 3. Update linked alerts in shared_state["alerts"]
+        sighting_id = approval.get("sighting_id")
+        for al in self.shared_state["alerts"]:
+            if (al.get("approval_id") == approval.get("approval_id")) or \
+               (incident_id and al.get("incident_id") == incident_id) or \
+               (sighting_id and al.get("sighting_id") == sighting_id):
+                al["officer_approved"] = (decision == "APPROVED")
+                al["officer_override"] = (decision == "OVERRIDE")
+                al["pending_review"]   = False
+
         self._log_agent_action(
             agent="orchestrator",
             action=f"officer_{decision.lower()}",
-            input_ref=approval_id,
+            input_ref=approval["approval_id"],
             output_summary=(
-                f"Officer {officer_id} {decision} approval {approval_id}. "
-                f"Ticket {ticket_id} → ASSIGNED" if decision == "APPROVED" else
-                f"Officer {officer_id} {decision} approval {approval_id}."
+                f"Officer {officer_id} {decision} approval {approval['approval_id']} (Incident {incident_id})."
             ),
             escalation_required=False,
         )
 
         return {
             "success":        True,
-            "approval_id":    approval_id,
+            "approval_id":    approval["approval_id"],
             "decision":       decision,
             "officer_id":     officer_id,
+            "incident_id":    incident_id,
             "ticket_id":      ticket_id,
             "ticket_update":  status_result,
             "decided_at":     approval["decided_at"],
             "notes":          notes,
             "is_demo":        True,
+        }
+
+    def update_incident_status(
+        self,
+        incident_id: str,
+        new_status: str,
+        officer_id: str = "OFFICER_DEMO",
+        notes: Optional[str] = None,
+    ) -> dict:
+        """
+        Gracefully updates an incident status in shared_state["incidents"].
+        Works for both newly generated incidents and historical demo incidents.
+        """
+        inc = next((i for i in self.shared_state["incidents"] if i.get("incident_id") == incident_id), None)
+        if inc is None:
+            # Check sample incidents and import into active state if found
+            sample_inc = next((i for i in SAMPLE_INCIDENTS if i.get("incident_id") == incident_id), None)
+            if sample_inc:
+                inc = dict(sample_inc)
+                self.shared_state["incidents"].append(inc)
+
+        if inc is None:
+            return {"success": False, "error": f"Incident {incident_id} not found"}
+
+        norm_status = new_status.upper()
+        inc["status"] = norm_status
+        if norm_status in ("RESOLVED", "CLOSED"):
+            inc["pending_approval"] = False
+            inc["resolution_notes"] = notes or f"Resolved by officer {officer_id}"
+            inc["assigned_officer"] = officer_id
+
+        # Also update linked ticket if one exists
+        matching_tickets = [t for t in self.shared_state["tickets"] if t.get("incident_id") == incident_id]
+        for t in matching_tickets:
+            self.agents["response"].update_incident_status(
+                ticket_id=t["ticket_id"],
+                new_status=norm_status,
+                officer_id=officer_id,
+                notes=notes,
+            )
+
+        # Update linked approval if resolved
+        for a in self.shared_state["approvals"]:
+            if a.get("incident_id") == incident_id and a.get("decision") == "PENDING":
+                a["decision"] = "APPROVED" if norm_status == "RESOLVED" else norm_status
+                a["decided_at"] = datetime.now(timezone.utc).isoformat()
+                a["officer_id"] = officer_id
+
+        self._log_agent_action(
+            agent="orchestrator",
+            action="update_incident_status",
+            input_ref=incident_id,
+            output_summary=f"Incident {incident_id} marked {norm_status} by {officer_id}",
+            escalation_required=False,
+        )
+
+        return {
+            "success":     True,
+            "incident_id": incident_id,
+            "status":      norm_status,
+            "incident":    inc,
+            "is_demo":     True,
         }
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -442,7 +551,7 @@ class VanRakshakOrchestrator:
         })
 
         # ── Demo Step 5: Hotspot analysis ──────────────────────────────────
-        hotspot_result = self.agents["hotspot"].analyze_hotspots(top_n=3)
+        hotspot_result = self.agents["hotspot"].analyze_hotspots(top_n=3, incidents=self.shared_state["incidents"])
         record_step("7_hotspot_analysis", {
             "description":    "Agent 5 — Hotspot Dashboard Updated",
             "top_hotspots":   [
@@ -457,6 +566,8 @@ class VanRakshakOrchestrator:
         self._demo_ran    = True
         self._demo_result = {
             "demo_id":          demo_id,
+            "scenario_id":      demo_id,
+            "status":           "COMPLETE",
             "scenario":         "Asiatic Lion sighting near Sasan Gir — Full Workflow Demo",
             "steps":            steps,
             "total_steps":      len(steps),
@@ -474,15 +585,15 @@ class VanRakshakOrchestrator:
         """Return the current demo scenario state."""
         if not self._demo_ran:
             return {
+                "status":   "IDLE",
                 "demo_ran": False,
                 "message":  "Demo has not been executed yet. POST /api/demo/run to start.",
+                "steps":    [],
                 "is_demo":  True,
             }
-        return {
-            "demo_ran": True,
-            "result":   self._demo_result,
-            "is_demo":  True,
-        }
+        res = dict(self._demo_result)
+        res["demo_ran"] = True
+        return res
 
     # ═══════════════════════════════════════════════════════════════════════
     # Dashboard data

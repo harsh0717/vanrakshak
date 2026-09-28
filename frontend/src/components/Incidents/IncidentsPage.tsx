@@ -5,6 +5,7 @@ import type { Incident, IncidentStatus } from '../../types';
 import RiskBadge from '../Common/RiskBadge';
 import StatusBadge from '../Common/StatusBadge';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import { broadcastEmergencyAlert } from '../../utils/alertBroadcaster';
 
 type Filter = 'ALL' | IncidentStatus;
 
@@ -65,10 +66,28 @@ export default function IncidentsPage() {
         await updateIncidentStatus(incident.id, 'RESOLVED');
       } else {
         await approveAction({
-          request_id: incident.id,
+          request_id: incident.approval_id || incident.id,
           action,
           officer_id: 'OFFICER_DEMO',
         });
+
+        if (action === 'APPROVE') {
+          broadcastEmergencyAlert({
+            alert_id: 'ALT-' + incident.id,
+            village_name: incident.village,
+            species: incident.species,
+            severity: (incident.severity || 'HIGH') as any,
+            distance_km: incident.distance_km || 0.8,
+            timestamp: new Date().toISOString(),
+            en_text: `CRITICAL ALERT: Incident ${incident.id} approved for dispatch near ${incident.village}. ${incident.species} in proximity.`,
+            gu_text: `ચેતવણી: ઘટના ${incident.id} મંજૂર કરવામાં આવી છે. ${incident.village} નજીક ${incident.species} ની હાજરી.`,
+            safety_actions: [
+              'Move all livestock inside covered pens immediately',
+              'Stay indoors and keep torches and outdoor lights switched on',
+              'Dial Forest Emergency Toll-Free 1926 if spotted near house',
+            ],
+          });
+        }
       }
       refetch();
     } catch {

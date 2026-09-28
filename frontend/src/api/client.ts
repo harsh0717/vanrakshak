@@ -3,6 +3,7 @@ import type {
   Alert,
   Incident,
   Sighting,
+  AgentInfo,
   AgentStatusResponse,
   CompensationClaim,
   CompensationChecklist,
@@ -17,21 +18,44 @@ const BASE_URL = '/api';
 
 // ─── Fallback / Sample Data ───────────────────────────────────────────────────
 
+export interface VillageItem {
+  village_id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  livestock_count: number;
+  population: number;
+  contact_number: string;
+  district: string;
+  risk_zone: string;
+}
+
+export const FALLBACK_VILLAGES: VillageItem[] = [
+  { village_id: "VLG001", name: "Sasan Gir", lat: 21.1242, lon: 70.5521, livestock_count: 420, population: 3800, contact_number: "+91-98765-00001", district: "Gir Somnath", risk_zone: "HIGH" },
+  { village_id: "VLG002", name: "Dhari", lat: 21.3262, lon: 71.0232, livestock_count: 310, population: 4200, contact_number: "+91-98765-00002", district: "Amreli", risk_zone: "MEDIUM" },
+  { village_id: "VLG003", name: "Khambha", lat: 21.0189, lon: 71.2783, livestock_count: 180, population: 2100, contact_number: "+91-98765-00003", district: "Amreli", risk_zone: "MEDIUM" },
+  { village_id: "VLG004", name: "Una", lat: 20.8242, lon: 71.0392, livestock_count: 260, population: 3500, contact_number: "+91-98765-00004", district: "Gir Somnath", risk_zone: "MEDIUM" },
+  { village_id: "VLG005", name: "Rajula", lat: 20.9167, lon: 71.4333, livestock_count: 500, population: 5200, contact_number: "+91-98765-00005", district: "Gir Somnath", risk_zone: "MEDIUM" },
+  { village_id: "VLG006", name: "Talala", lat: 20.9560, lon: 70.4560, livestock_count: 220, population: 1600, contact_number: "+91-98765-00006", district: "Gir Somnath", risk_zone: "HIGH" },
+  { village_id: "VLG007", name: "Mendarda", lat: 21.3200, lon: 70.4200, livestock_count: 150, population: 900, contact_number: "+91-98765-00007", district: "Junagadh", risk_zone: "LOW" },
+  { village_id: "VLG008", name: "Kodinar", lat: 20.7950, lon: 70.7050, livestock_count: 380, population: 4100, contact_number: "+91-98765-00008", district: "Gir Somnath", risk_zone: "LOW" },
+];
+
 export const FALLBACK_SIGHTINGS: Sighting[] = [
   {
-    id: 'S-001',
+    id: 'SGT001',
     species: 'Asiatic Lion',
     location: 'Sector 7 — Near Maldhari settlement',
     village: 'Sasan Gir',
     distance_km: 1.8,
     confidence: 0.91,
     timestamp: new Date(Date.now() - 25 * 60000).toISOString(),
-    reported_by: 'Forest Guard Ramesh Patel',
+    reported_by: 'Forest Guard (ADMIN)',
     verified: true,
     risk_level: 'HIGH',
   },
   {
-    id: 'S-002',
+    id: 'SGT002',
     species: 'Leopard',
     location: 'Agricultural fringe — Khambha road',
     village: 'Dhari',
@@ -43,7 +67,7 @@ export const FALLBACK_SIGHTINGS: Sighting[] = [
     risk_level: 'MEDIUM',
   },
   {
-    id: 'S-003',
+    id: 'SGT003',
     species: 'Asiatic Lion',
     location: 'Deep forest interior — Block D',
     village: 'Mendarda',
@@ -55,8 +79,8 @@ export const FALLBACK_SIGHTINGS: Sighting[] = [
     risk_level: 'LOW',
   },
   {
-    id: 'S-004',
-    species: 'Striped Hyena',
+    id: 'SGT004',
+    species: 'Hyena',
     location: 'Cattle grazing boundary',
     village: 'Talala',
     distance_km: 0.9,
@@ -67,10 +91,10 @@ export const FALLBACK_SIGHTINGS: Sighting[] = [
     risk_level: 'HIGH',
   },
   {
-    id: 'S-005',
+    id: 'SGT005',
     species: 'Leopard',
     location: 'Riverbed — Hiran river crossing',
-    village: 'Visavadar',
+    village: 'Khambha',
     distance_km: 4.1,
     confidence: 0.68,
     timestamp: new Date(Date.now() - 360 * 60000).toISOString(),
@@ -82,96 +106,97 @@ export const FALLBACK_SIGHTINGS: Sighting[] = [
 
 export const FALLBACK_INCIDENTS: Incident[] = [
   {
-    id: 'inc-001',
-    display_id: 'INC-001',
+    id: 'INC001',
+    display_id: 'INC001',
     village: 'Sasan Gir',
     species: 'Asiatic Lion',
     severity: 'HIGH',
     risk_score: 0.87,
     status: 'ASSIGNED',
     timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-    recommended_team: 'Rapid Response Team Alpha',
-    assigned_officer: 'Officer Mehra',
-    description: 'Lion sighted near livestock pen, Maldhari colony. Immediate response required.',
+    recommended_team: 'Gir Rapid Response Alpha',
+    assigned_officer: 'ADMIN',
+    description: 'Lion sighted near livestock pen, Maldhari settlement. Immediate response assigned.',
     pending_approval: false,
-    sighting_id: 'S-001',
+    sighting_id: 'SGT001',
   },
   {
-    id: 'inc-002',
-    display_id: 'INC-002',
+    id: 'INC002',
+    display_id: 'INC002',
     village: 'Dhari',
     species: 'Leopard',
     severity: 'MEDIUM',
     risk_score: 0.63,
     status: 'NEW',
     timestamp: new Date(Date.now() - 95 * 60000).toISOString(),
-    recommended_team: 'Patrol Unit B',
+    recommended_team: 'Amreli District Response Team',
     description: 'Leopard photographed at agricultural boundary. Monitoring recommended.',
     pending_approval: true,
+    sighting_id: 'SGT002',
   },
   {
-    id: 'inc-003',
-    display_id: 'INC-003',
+    id: 'INC003',
+    display_id: 'INC003',
     village: 'Talala',
-    species: 'Striped Hyena',
+    species: 'Hyena',
     severity: 'HIGH',
     risk_score: 0.79,
     status: 'IN_PROGRESS',
     timestamp: new Date(Date.now() - 250 * 60000).toISOString(),
-    recommended_team: 'Rapid Response Team Beta',
-    assigned_officer: 'Officer Singh',
-    description: 'Hyena pack near cattle pen. Two calves reportedly missing.',
+    recommended_team: 'Talala Buffer Monitoring Unit',
+    assigned_officer: 'ADMIN',
+    description: 'Hyena pack near cattle pen. Response patrol on route.',
     pending_approval: false,
-    sighting_id: 'S-004',
+    sighting_id: 'SGT004',
   },
   {
-    id: 'inc-004',
-    display_id: 'INC-004',
+    id: 'INC004',
+    display_id: 'INC004',
     village: 'Mendarda',
     species: 'Asiatic Lion',
     severity: 'LOW',
     risk_score: 0.32,
     status: 'RESOLVED',
     timestamp: new Date(Date.now() - 24 * 3600000).toISOString(),
-    recommended_team: 'Monitoring Unit',
-    assigned_officer: 'Officer Patel',
-    description: 'Lion sighted deep in forest interior. No immediate threat. Logged for tracking.',
+    recommended_team: 'Junagadh Mobile Patrol',
+    assigned_officer: 'ADMIN',
+    description: 'Lion sighted deep in forest interior. Logged for tracking.',
     pending_approval: false,
-    sighting_id: 'S-003',
+    sighting_id: 'SGT003',
   },
   {
-    id: 'inc-005',
-    display_id: 'INC-005',
-    village: 'Visavadar',
+    id: 'INC005',
+    display_id: 'INC005',
+    village: 'Khambha',
     species: 'Leopard',
     severity: 'MEDIUM',
     risk_score: 0.55,
     status: 'ESCALATED',
     timestamp: new Date(Date.now() - 6 * 3600000).toISOString(),
-    recommended_team: 'Rapid Response Team Alpha',
-    description: 'Leopard entered village outskirts. Villager reported close encounter.',
+    recommended_team: 'Gir Rapid Response Alpha',
+    description: 'Leopard entered village outskirts. Close encounter reported.',
     pending_approval: false,
-    sighting_id: 'S-005',
+    sighting_id: 'SGT005',
   },
   {
-    id: 'inc-006',
-    display_id: 'INC-006',
+    id: 'INC006',
+    display_id: 'INC006',
     village: 'Una',
-    species: 'Crocodile',
+    species: 'Asiatic Lion',
     severity: 'MEDIUM',
     risk_score: 0.61,
     status: 'NEW',
     timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-    recommended_team: 'Reptile Response Unit',
-    description: 'Large crocodile sighted near Shetrunji river bank used for bathing.',
+    recommended_team: 'Gir Rapid Response Alpha',
+    description: 'Lion movement logged in Una buffer zone.',
     pending_approval: true,
   },
 ];
 
 export const FALLBACK_ALERTS: Alert[] = [
   {
-    id: 'alert-001',
-    incident_id: 'inc-001',
+    id: 'ALT001',
+    incident_id: 'INC001',
     village: 'Sasan Gir',
     species: 'Asiatic Lion',
     risk_level: 'HIGH',
@@ -185,7 +210,7 @@ export const FALLBACK_ALERTS: Alert[] = [
       'Secure all livestock in reinforced enclosures immediately',
       'Alert neighboring households via community messaging',
       'Do not approach or attempt to chase the animal',
-      'Contact Forest Department: 1926 or +91-2877-285541',
+      'Contact Forest Department: 1926 or 02877-285541',
       'Remain indoors after sunset until further notice',
     ],
     timestamp: new Date(Date.now() - 20 * 60000).toISOString(),
@@ -194,8 +219,8 @@ export const FALLBACK_ALERTS: Alert[] = [
     pending_review: false,
   },
   {
-    id: 'alert-002',
-    incident_id: 'inc-002',
+    id: 'ALT002',
+    incident_id: 'INC002',
     village: 'Dhari',
     species: 'Leopard',
     risk_level: 'MEDIUM',
@@ -217,23 +242,23 @@ export const FALLBACK_ALERTS: Alert[] = [
     pending_review: true,
   },
   {
-    id: 'alert-003',
-    incident_id: 'inc-003',
+    id: 'ALT003',
+    incident_id: 'INC003',
     village: 'Talala',
-    species: 'Striped Hyena',
+    species: 'Hyena',
     risk_level: 'HIGH',
     distance_km: 0.9,
     confidence: 0.72,
     message_en:
-      '🚨 CRITICAL: Hyena pack reported within 0.9 km of Talala. Missing livestock reported. Forest rapid response team dispatched. Please stay alert.',
+      '🚨 CRITICAL: Hyena pack reported within 0.9 km of Talala. Forest rapid response team dispatched. Please stay alert.',
     message_gu:
-      '🚨 ગંભીર: ટાળા ગામ નજીક ૦.૯ કિ.મી.ની અંદર ઝરખ (hyena) ટોળું જોવા મળ્યું. ગૂમ થયેલ પશુઓ નોંધાયા. ઝડપી પ્રતિભાવ ટીમ મોકલવામાં આવી છે.',
+      '🚨 ગંભીર: તાલાલા ગામ નજીક ૦.૯ કિ.મી.ની અંદર ઝરખ ટોળું જોવા મળ્યું. ઝડપી પ્રતિભાવ ટીમ મોકલવામાં આવી છે.',
     safety_actions: [
       'Do NOT venture near the boundary area',
       'Keep all livestock secured — hyenas are nocturnal predators',
       'Travel in groups with torchlight if movement required',
-      'Report any missing or injured livestock to Forest Department immediately',
-      'Emergency: 1926',
+      'Report any sightings to Forest Department immediately',
+      'Emergency Helpline: 1926',
     ],
     timestamp: new Date(Date.now() - 245 * 60000).toISOString(),
     officer_approved: true,
@@ -241,19 +266,19 @@ export const FALLBACK_ALERTS: Alert[] = [
     pending_review: false,
   },
   {
-    id: 'alert-004',
-    incident_id: 'inc-005',
-    village: 'Visavadar',
+    id: 'ALT004',
+    incident_id: 'INC005',
+    village: 'Khambha',
     species: 'Leopard',
     risk_level: 'MEDIUM',
     distance_km: 4.1,
     confidence: 0.68,
     message_en:
-      '⚡ MEDIUM RISK: Leopard movement near Visavadar. Animal has been sighted near river crossing. Monitor situation.',
+      '⚡ MEDIUM RISK: Leopard movement near Khambha. Animal has been sighted near river crossing. Monitor situation.',
     message_gu:
-      '⚡ મધ્યમ જોખમ: વિસાવદર નજીક દીપડાની હિલચાલ. નદી ક્રોસિંગ પર પ્રાણી જોવા મળ્યું. પરિસ્થિતિ પર ધ્યાન રાખો.',
+      '⚡ મધ્યમ જોખમ: ખાંભા નજીક દીપડાની હિલચાલ. નદી ક્રોસિંગ પર પ્રાણી જોવા મળ્યું. પરિસ્થિતિ પર ધ્યાન રાખો.',
     safety_actions: [
-      'Avoid Hiran river crossing area until Forest Department clearance',
+      'Avoid river crossing area until Forest Department clearance',
       'Do not allow children near the riverbank',
       'Alert community members of sighting',
     ],
@@ -263,22 +288,21 @@ export const FALLBACK_ALERTS: Alert[] = [
     pending_review: true,
   },
   {
-    id: 'alert-005',
-    incident_id: 'inc-006',
+    id: 'ALT005',
+    incident_id: 'INC006',
     village: 'Una',
-    species: 'Crocodile',
+    species: 'Asiatic Lion',
     risk_level: 'MEDIUM',
-    distance_km: 0.3,
+    distance_km: 1.5,
     confidence: 0.85,
     message_en:
-      '⚡ MEDIUM RISK: Large Mugger Crocodile (est. 4m) on Shetrunji river bank. Area frequently used for bathing. Avoid river access immediately.',
+      '⚡ MEDIUM RISK: Asiatic Lion movement detected near Una agricultural outskirts.',
     message_gu:
-      '⚡ મધ્યમ જોખમ: શેત્રુંજી નદી કિનારે મોટો મગર (અંદાજે ૪ મી.) જોવા મળ્યો. સ્નાન માટે ઉપયોગમાં આવતો વિસ્તાર. તાત્કાલિક નદી ઍક્સેસ ટાળો.',
+      '⚡ મધ્યમ જોખમ: ઉના સીમાડે એશિયાઈ સિંહની હિલચાલ જોવા મળી. સાવચેતી રાખો.',
     safety_actions: [
-      'Prohibit all river bathing and washing activities immediately',
-      'Reptile Response Unit has been notified',
-      'Keep children away from all river banks',
-      'Do not attempt to remove the animal yourself',
+      'Secure domestic animals overnight',
+      'Avoid going outside alone at dawn or dusk',
+      'Report sightings to Forest Control Room',
     ],
     timestamp: new Date(Date.now() - 115 * 60000).toISOString(),
     officer_approved: false,
@@ -366,7 +390,7 @@ export const FALLBACK_AGENTS: AgentStatusResponse = {
       action_log: [
         'Loaded Gujarat Livestock Loss Compensation scheme FY2024',
         'Generated 7-item document checklist for CLM-014',
-        'Claim routing to Officer Mehta for final approval',
+        'Claim routing to ADMIN for final approval',
       ],
     },
   ],
@@ -402,9 +426,28 @@ export const FALLBACK_DASHBOARD: DashboardData = {
   last_updated: new Date().toISOString(),
 };
 
-// ─── HTTP Helper ──────────────────────────────────────────────────────────────
+// ─── HTTP Helper & Connection Tracking ────────────────────────────────────────
 
 let backendOnline = true;
+type BackendStatusListener = (online: boolean) => void;
+const statusListeners = new Set<BackendStatusListener>();
+
+export function onBackendStatusChange(listener: BackendStatusListener): () => void {
+  statusListeners.add(listener);
+  return () => { statusListeners.delete(listener); };
+}
+
+function setBackendOnline(status: boolean) {
+  if (backendOnline !== status) {
+    backendOnline = status;
+    statusListeners.forEach((fn) => {
+      try { fn(status); } catch { /* ignore */ }
+    });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('backend-status', { detail: { online: status } }));
+    }
+  }
+}
 
 async function fetchApi<T>(
   path: string,
@@ -423,20 +466,26 @@ async function fetchApi<T>(
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     const data = (await res.json()) as T;
-    backendOnline = true;
+    setBackendOnline(true);
     return { data, error: null, offline: false };
   } catch (err) {
-    backendOnline = false;
+    setBackendOnline(false);
     const message = err instanceof Error ? err.message : 'Unknown error';
     return { data: null, error: message, offline: true };
   }
 }
 
-export function isBackendOnline() {
+export function isBackendOnline(): boolean {
   return backendOnline;
 }
 
 // ─── API Functions ────────────────────────────────────────────────────────────
+
+export async function getVillages(): Promise<VillageItem[]> {
+  const { data, offline } = await fetchApi<{ villages: VillageItem[] }>('/villages');
+  if (offline || !data) return FALLBACK_VILLAGES;
+  return data.villages ?? FALLBACK_VILLAGES;
+}
 
 export async function getDashboard(): Promise<DashboardData> {
   const { data, offline } = await fetchApi<DashboardData>('/dashboard');
@@ -451,19 +500,41 @@ export async function getSightings(): Promise<Sighting[]> {
   return data.sightings ?? FALLBACK_SIGHTINGS;
 }
 
-export async function createSighting(body: SightingCreateRequest): Promise<Sighting | null> {
-  const { data } = await fetchApi<Sighting>('/sightings', {
+export async function createSighting(body: SightingCreateRequest | Record<string, any>): Promise<any> {
+  const { data } = await fetchApi<any>('/sightings', {
     method: 'POST',
     body: JSON.stringify({
       species: body.species,
-      lat: 21.1,
-      lon: 70.5,
-      source: body.reported_by ?? 'villager_report',
-      notes: body.location,
-      nearest_village_id: body.village,
-      confidence: body.confidence ?? 0.75,
+      lat: body.lat ?? 21.1242,
+      lon: body.lon ?? 70.5521,
+      source: body.source ?? body.reported_by ?? 'villager_report',
+      notes: body.notes ?? body.location ?? 'Citizen sighting report',
+      nearest_village_id: body.nearest_village_id ?? body.village ?? 'VLG001',
+      distance_km: body.distance_km ?? 1.5,
+      time_of_day: body.time_of_day ?? 'dusk',
+      count: body.count ?? 1,
+      confidence: body.confidence ?? 0.85,
     }),
   });
+  return data;
+}
+
+export const reportSighting = createSighting;
+
+export async function triggerSos(body: {
+  lat?: number;
+  lon?: number;
+  village_id?: string;
+  species?: string;
+  contact?: string;
+  message?: string;
+  distance_km?: number;
+}): Promise<any> {
+  const { data, error } = await fetchApi<any>('/sos', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (error) throw new Error(error);
   return data;
 }
 
@@ -495,29 +566,34 @@ export async function getAlerts(): Promise<Alert[]> {
   const { data, offline } = await fetchApi<{ alerts: Alert[] }>('/alerts');
   if (offline || !data) return FALLBACK_ALERTS;
   // Normalize alert objects to match frontend Alert type
-  const raw = data.alerts ?? [];
-  return raw.map((al: Record<string, unknown>) => ({
-    id:              (al.alert_id as string) || (al.id as string) || '',
-    incident_id:     al.incident_id as string | undefined,
-    village:         (al.village_name as string) || (al.village as string) || 'Unknown',
-    species:         (al.species as string) || 'Unknown',
-    risk_level:      (al.risk_level as string) || 'MEDIUM',
-    distance_km:     Number(al.distance_km) || 2.5,
-    confidence:      Number(al.confidence) || 0.75,
-    message_en:      (al.message_en as string) || '',
-    message_gu:      (al.message_gu as string) || '',
-    safety_actions:  (al.safety_actions as string[]) || [],
-    timestamp:       (al.issued_at as string) || (al.timestamp as string) || new Date().toISOString(),
-    officer_approved:(al.officer_approved as boolean) || false,
-    officer_override:(al.officer_override as boolean) || false,
-    pending_review:  !(al.officer_approved as boolean),
-  })) as Alert[];
+  const raw = (data.alerts ?? []) as any[];
+  return raw.map((al: any) => {
+    const isApproved = Boolean(al.officer_approved);
+    const isOverride = Boolean(al.officer_override);
+    return {
+      id:              al.alert_id || al.id || '',
+      incident_id:     al.incident_id,
+      approval_id:     al.approval_id,
+      village:         al.village_name || al.village || 'Gir Protected Sector',
+      species:         al.species || 'Unknown',
+      risk_level:      al.risk_level || al.severity || 'MEDIUM',
+      distance_km:     Number(al.distance_km) || 2.5,
+      confidence:      Number(al.confidence) || 0.75,
+      message_en:      al.message_english || al.message_en || '',
+      message_gu:      al.message_gujarati || al.message_gu || '',
+      safety_actions:  al.safety_actions || [],
+      timestamp:       al.issued_at || al.timestamp || new Date().toISOString(),
+      officer_approved:isApproved,
+      officer_override:isOverride,
+      pending_review:  al.pending_review !== undefined ? Boolean(al.pending_review) : !(isApproved || isOverride),
+    };
+  }) as Alert[];
 }
 
 export async function generateAlert(incidentId: string): Promise<Alert | null> {
   const { data } = await fetchApi<Alert>('/alerts/generate', {
     method: 'POST',
-    body: JSON.stringify({ incident_id: incidentId }),
+    body: JSON.stringify({ incident_id: incidentId, sighting_id: incidentId }),
   });
   return data;
 }

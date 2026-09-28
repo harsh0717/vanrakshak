@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   startCompensation,
   getCompensationChecklist,
+  getIncidents,
   FALLBACK_INCIDENTS,
 } from '../../api/client';
+import { useApi } from '../../hooks/useApi';
 import type {
   LossType,
   StartCompensationRequest,
@@ -39,6 +41,9 @@ export default function CompensationPage() {
   const [claims, setClaims] = useState<CompensationClaim[]>([]);
   const [checkedDocs, setCheckedDocs] = useState<Record<string, boolean>>({});
 
+  const { data: incidentList } = useApi(getIncidents, []);
+  const availableIncidents = incidentList && incidentList.length > 0 ? incidentList : FALLBACK_INCIDENTS;
+
   useEffect(() => {
     loadChecklist(form.loss_type);
   }, [form.loss_type]);
@@ -53,6 +58,15 @@ export default function CompensationPage() {
 
   function updateForm(key: keyof StartCompensationRequest, value: string | number) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleIncidentSelect(incId: string) {
+    const match = availableIncidents.find((i) => i.id === incId);
+    setForm((prev) => ({
+      ...prev,
+      incident_id: incId,
+      village: match?.village || prev.village,
+    }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -165,13 +179,13 @@ export default function CompensationPage() {
               <select
                 className="form-select"
                 value={form.incident_id}
-                onChange={(e) => updateForm('incident_id', e.target.value)}
+                onChange={(e) => handleIncidentSelect(e.target.value)}
                 required
               >
                 <option value="">— Select incident —</option>
-                {FALLBACK_INCIDENTS.map((inc) => (
+                {availableIncidents.map((inc) => (
                   <option key={inc.id} value={inc.id}>
-                    {inc.display_id} · {inc.species} · {inc.village}
+                    {inc.display_id || inc.id} · {inc.species} · {inc.village}
                   </option>
                 ))}
               </select>
